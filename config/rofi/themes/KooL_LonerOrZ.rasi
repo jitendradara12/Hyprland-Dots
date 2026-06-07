@@ -1,0 +1,154 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+/* KooL Style LonerOrZ */
+/* Submitted by https://github.com/lonerOrz */
+/* Edited by Ja */
+/* Material You Style Edits by Gemini */
+
+
+configuration {
+    show-icons:                     true;
+    display-drun:                   ""; /* Changed to a search icon */
+    drun-display-format:            "{icon} {name}";
+    disable-history:                false;
+    click-to-exit:                  true;
+    location:                       0;
+}
+
+/*****----- Global Properties -----*****/
+/* A Material You inspired color palette (Blue/Purple theme) */
+* {
+    font: "Roboto 12"; /* Material Design's standard font */
+
+    /* M3 Palette */
+    BG:     #0C0B0Bff; /* from $background */
+    BGA:    #C08DBFff; /* from $color13 */
+    FG:     #E9D7E9ff; /* from $foreground */
+    FGA:    #906A8Fff; /* from $color5 */
+    BDR:    #613D5Bff; /* from $color12 */
+    SEL:    #3A3939ff; /* from $color0 */
+    UGT:    #C08DBFff; /* from $color13 */
+    IMG:    #D7BDD6ff; /* from $color15 */
+    OFF:    #492E44ff; /* from $color4 */
+    ON:     #C08DBFff; /* from $color13 */
+}
+
+window {
+    transparency:                   "real";
+    background-color:               @BG;
+    text-color:                     @FG;
+    border:                         1px; /* Subtle border for definition */
+    border-color:                   @BDR;
+    border-radius:                  28px; /* Standard M3 large rounded corners */
+    width:                          30%;
+    anchor:                         center;
+    x-offset:                       0;
+    y-offset:                       0;
+}
+
+prompt {
+    enabled:                        true;
+    padding:                        16px;
+    background-color:               inherit;
+    text-color:                     @FG;
+    font:                           "Roboto Medium 16";
+}
+
+textbox-prompt-colon {
+    expand:                         false;
+    str:                            ""; /* Search Icon */
+    background-color:               inherit;
+    text-color:                     inherit;
+    padding:                        0px 10px 0px 10px;
+    font:                           "Roboto Medium 16";
+}
+
+entry {
+    background-color:               inherit;
+    text-color:                     @FG;
+    placeholder-color:              #49454Fff; /* On Surface Variant */
+    expand:                         true;
+    horizontal-align:               0;
+    placeholder:                    "Search apps...";
+    blink:                          true;
+    padding:                        16px; /* Increased padding */
+}
+
+inputbar {
+    children:                       [ textbox-prompt-colon, entry ];
+    background-color:               #040404; /* Changed for a "container" look */
+    text-color:                     @FG;
+    border:                         0px;
+    border-radius:                  37px; /* Pill shape */
+    margin:                         0px 12px 0px 12px; /* Added horizontal margin */
+    padding:                        8px;
+}
+
+
+listview {
+    background-color:               transparent;
+    columns:                        1;
+    lines:                          4; /* Reduced slightly for more spacing */
+    spacing:                        8px; /* Increased spacing */
+    cycle:                          true;
+    dynamic:                        true;
+    layout:                         vertical;
+    padding:                        0px 12px 12px 12px; /* Added padding */
+}
+
+mainbox {
+    background-color:               @BG;
+    children:                       [ inputbar, listview ];
+    spacing:                        20px; /* Increased spacing */
+    padding:                        12px;
+}
+
+element {
+    background-color:               transparent; /* Default state is transparent */
+    text-color:                     @FG;
+    orientation:                    horizontal;
+    border-radius:                  20px;
+    padding:                        12px;
+}
+
+element-icon {
+    background-color:               transparent;
+    text-color:                     inherit;
+    size:                           24px;
+    margin:                         2px 8px 2px 8px; /* Added margin */
+}
+
+element-text {
+    background-color:               transparent;
+    text-color:                     inherit;
+    expand:                         true;
+    horizontal-align:               0;
+    vertical-align:                 0.5;
+}
+
+element selected {
+    background-color:               @ON;
+    text-color:                     @SEL;
+    border-radius:                  22px;
+}
+
+/* Removed redundant/unused selectors for clarity */
+
+/*****----- Message -----*****/
+message {
+    background-color:               transparent;
+    border:                         0px;
+    padding:                        12px;
+}
+error-message {
+    padding:                        20px;
+    background-color:               @BG;
+    text-color:                     @FG;
+}
+textbox {
+    padding:                        20px;
+    border-radius:                  10px;
+    background-color:               @FG;
+    text-color:                     @SEL;
+    vertical-align:                 0.5;
+    horizontal-align:               0.5;
+}
