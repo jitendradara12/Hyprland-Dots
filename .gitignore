@@ -80,7 +80,7 @@ config/configstore/
 config/dconf/
 config/enchant/
 config/eog/
-config/cava/
+config/cava/config
 #i don't use ghostty
 config/ghostty/
 config/evince/
@@ -152,11 +152,10 @@ config/*credential*
 config/hypr/wallpaper_effects/.wallpaper_current
 config/hypr/wallust/wallust-hyprland.conf
 config/rofi/wallust/colors-rofi.rasi
-config/rofi/.current_wallpaper
-config/rofi/
+config/rofi/.current_wallpaper*
 config/waybar/wallust/
 config/waybar/wallust/colors-waybar.css
-config/quickshell/
+config/quickshell/qml_color.json
 config/seanime-denshi/
 config/.gsd-keyboard.settings-ported
 config/connections.db
