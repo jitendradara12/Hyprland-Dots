@@ -149,7 +149,7 @@ config/*.key
 config/*secret*
 config/*token*
 config/*credential*
-config/hypr/wallpaper_effects/.wallpaper_current
+config/hypr/wallpaper_effects/.wallpaper_current*
 config/hypr/wallust/wallust-hyprland.conf
 config/rofi/wallust/colors-rofi.rasi
 config/rofi/.current_wallpaper*
