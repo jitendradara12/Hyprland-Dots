@@ -1,0 +1,11 @@
+swipe:
+  3:
+    left:
+      sendkey: "leftmeta+left"
+    right:
+      sendkey: "leftalt+tab"
+      #sendkey: "leftmeta+right"
+    up:
+      sendkey: "LEFTmeta+a"
+    down:
+      sendkey: "LEFTmeta+d"

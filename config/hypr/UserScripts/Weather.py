@@ -109,6 +109,11 @@ WEATHER_ICONS = {
     "default": "",
 }
 
+# get location_id
+# to get your own location_id, go to https://weather.com & search your location.
+# once you choose your location, you can see the location_id in the URL(64 chars long hex string)
+# like this: https://weather.com/en-PH/weather/today/l/bca47d1099e762a012b9a139c36f30a0b1e647f69c0c4ac28b537e7ae9c1c200
+location_id = "3a40d1956c2891f054910c72f39a8fa680063c7390b49ea6177a575a16279ca4"
 WMO_STATUS = {
     0: "Clear sky",
     1: "Mainly clear",

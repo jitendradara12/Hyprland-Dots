@@ -23,9 +23,6 @@
 //"gtk-layer-shell": true,
 	
 "modules-left": [
-	"custom/separator#blank",
-	"custom/hypr_layout",
-	"custom/separator#blank",
 	"clock#vertical",
 	"custom/light_dark",
 ],

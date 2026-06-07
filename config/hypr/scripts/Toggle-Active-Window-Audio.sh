@@ -54,18 +54,18 @@ pidsJson="$(printf '%s\n' "${all_pids[@]}" | jq -s 'map(tonumber)')"
 #// Check if any descendant PID matches application.process.id or else verify other statements.
 mapfile -t sink_ids < <(jq -r --argjson pids "${pidsJson}" --arg class "${__class}" --arg title "${__title}" '
 .[] |
-  def norm(x): (x // "" | ascii_downcase | gsub("[-_~.]+";" ") | gsub("[^a-z0-9 ]+";" ") | gsub("[[:space:]]+";" ") | gsub("^ +| +$";""));
-  def to_num(x): (try (x | tostring | tonumber) catch null);
+ def lc(x): (x // "" | ascii_downcase);
+  def normalize(x): x | gsub("[-_~.]+";" ") ;
   select(
-  (to_num(.properties["application.process.id"]) as $p | $p != null and ($pids | index($p)))
+  (.properties["application.process.id"] | tostring | tonumber? as $p | $p != null and ($pids | index($p)))
   or
-  (norm(.properties["application.name"]) | contains(norm($class)))
+  (lc(.properties["application.name"]) | contains(lc($class)))
   or
-  (norm(.properties["application.id"]) | contains(norm($class)))
+  (lc(.properties["application.id"]) | contains(lc($class)))
   or
-  (norm(.properties["application.process.binary"]) | contains(norm($class)))
+  (lc(.properties["application.process.binary"]) | contains(lc($class)))
   or
-  (norm(.properties["media.name"]) | contains(norm($title)))
+  (normalize(lc(.properties["media.name"])) | contains(normalize(lc($title))))
   ) | .index' <<< "${sink_json}"
 )
 
@@ -87,9 +87,8 @@ if [[ "${#sink_ids[@]}" -eq 0 ]]; then
       done
     done
     fallbackJson="$(printf '%s\n' "${all_fallback[@]}" | jq -s 'map(tonumber)')"
-    mapfile -t sink_ids < <( jq -r --argjson pids "${fallbackJson}" '.[] |
-      def to_num(x): (try (x | tostring | tonumber) catch null);
-      select((to_num(.properties["application.process.id"]) as $p | $p != null and ($pids | index($p)))) | .index' <<< "${sink_json}" )
+    mapfile -t sink_ids < <( jq -r --argjson pids "${fallbackJson}" '.[] | 
+      select((.properties["application.process.id"] | tostring | tonumber? as $p | $p != null and ($pids | index($p)))) | .index' <<< "${sink_json}" )
   fi
 fi
 

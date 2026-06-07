@@ -23,9 +23,6 @@
 "margin-bottom": 2,
 
 "modules-left": [
-	"custom/separator#blank",
-	"custom/hypr_layout",
-	"custom/separator#blank",
     "custom/menu",
     "cpu",
     "temperature", 
@@ -49,7 +46,10 @@
     "power-profiles-daemon",
     "pulseaudio#microphone",
     "keyboard-state",
+<<<<<<< HEAD
+=======
     "custom/nightlight",
+>>>>>>> hyprdotfiles-import
     "custom/power",
     ],
 },

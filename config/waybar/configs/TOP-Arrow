@@ -15,9 +15,6 @@
 	"position": "top",
 
 	"modules-left": [
-	"custom/separator#blank",
-	"custom/hypr_layout",
-	"custom/separator#blank",
 		"hyprland/mode",
 		"hyprland/workspaces",
 		"custom/arrow10",

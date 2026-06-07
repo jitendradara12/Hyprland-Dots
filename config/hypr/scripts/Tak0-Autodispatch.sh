@@ -71,18 +71,6 @@ fi
 
 echo "=== Deploy '$CMD' → WS $TARGET_WS @ $(date) ===" >>"$LOGFILE"
 
-# Detect active Hyprland config mode
-config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-hypr_dir="$config_home/hypr"
-lua_entry="$hypr_dir/hyprland.lua"
-legacy_lua_entry="$config_home/hyprland.lua"
-
-if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
-    hypr_config_mode="lua"
-else
-    hypr_config_mode="conf"
-fi
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 1️⃣ HYPRLAND READINESS GATE
 # ─────────────────────────────────────────────────────────────────────────────
@@ -103,17 +91,11 @@ done
 cleanup() {
   echo "Cleanup: removing temporary capture rules and initialWorkspace at $(date)" >>"$LOGFILE"
 
-  if [[ "$hypr_config_mode" == "lua" ]]; then
-      # In Lua mode, we try to nullify the temporary rules or trigger a reload
-      # Since we don't have a reliable 'unset' API via eval yet, we reload
-      hyprctl reload >>"$LOGFILE" 2>&1 || true
-  else
-      hyprctl keyword windowrulev2 "unset, initialClass:.*" >>"$LOGFILE" 2>&1 || true
-      for RULE in "${CAPTURE_RULES[@]}"; do
-        echo "Cleanup: removing temporary capture rule: $RULE" >>"$LOGFILE"
-        hyprctl keyword windowrulev2 "unset, $RULE" >>"$LOGFILE" 2>&1 || true
-      done
-  fi
+  hyprctl keyword windowrulev2 "unset, initialClass:.*" >>"$LOGFILE" 2>&1 || true
+  for RULE in "${CAPTURE_RULES[@]}"; do
+    echo "Cleanup: removing temporary capture rule: $RULE" >>"$LOGFILE"
+    hyprctl keyword windowrulev2 "unset, $RULE" >>"$LOGFILE" 2>&1 || true
+  done
 }
 
 trap cleanup EXIT INT TERM ERR
@@ -123,35 +105,28 @@ trap cleanup EXIT INT TERM ERR
 # ─────────────────────────────────────────────────────────────────────────────
 #   Temporarily forces ALL windows (initialClass:.*)
 #   onto the target workspace.
+#
+#   Protects against ultra-fast helpers:
+#     • gpu-process
+#     • renderer
+#     • steamwebhelper
 
 echo "Applying temporary initialWorkspace capture (initialClass:.*)" >>"$LOGFILE"
-if [[ "$hypr_config_mode" == "lua" ]]; then
-    # Note: Using workspace property in hl.window_rule as a best-effort equivalent
-    hyprctl eval "hl.window_rule({ name = 'autodispatch-nuclear', match = { class = '.*' }, workspace = '$TARGET_WS' })" >>"$LOGFILE" 2>&1 || true
-else
-    hyprctl keyword windowrulev2 \
-      "initialWorkspace $TARGET_WS silent, initialClass:.*" \
-      >>"$LOGFILE" 2>&1 || true
-fi
+hyprctl keyword windowrulev2 \
+  "initialWorkspace $TARGET_WS silent, initialClass:.*" \
+  >>"$LOGFILE" 2>&1 || true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3️⃣.1 OPTIONAL CLASS-BASED PRE-CAPTURE
 # ─────────────────────────────────────────────────────────────────────────────
 #   Additional precision rules.
+#   Useful for Electron / Steam multi-process hell.
 
 for RULE in "${CAPTURE_RULES[@]}"; do
   echo "Applying temporary capture rule: $RULE" >>"$LOGFILE"
-  if [[ "$hypr_config_mode" == "lua" ]]; then
-      # Attempt to parse rule string into Lua table if it matches class:pattern
-      if [[ "$RULE" =~ class:\^\((.*)\)\$ ]]; then
-          local class_pat="${BASH_REMATCH[1]}"
-          hyprctl eval "hl.window_rule({ name = 'autodispatch-$class_pat', match = { class = '$class_pat' }, workspace = '$TARGET_WS' })" >>"$LOGFILE" 2>&1 || true
-      fi
-  else
-      hyprctl keyword windowrulev2 \
-        "initialWorkspace $TARGET_WS silent, $RULE" \
-        >>"$LOGFILE" 2>&1 || true
-  fi
+  hyprctl keyword windowrulev2 \
+    "initialWorkspace $TARGET_WS silent, $RULE" \
+    >>"$LOGFILE" 2>&1 || true
 done
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -183,14 +158,9 @@ echo "App gate name: $APP_NAME" >>"$LOGFILE"
 
 sleep 1.5
 
+#!TO-DO: Release the nuclear option ASAP
 echo "Releasing ultra-early wide capture" >>"$LOGFILE"
-if [[ "$hypr_config_mode" == "lua" ]]; then
-    # In Lua mode, we rely on the supervision loop for precision after launch
-    # and cleanup will handle the rest.
-    :
-else
-    hyprctl keyword windowrulev2 "unset, initialClass:.*" >>"$LOGFILE" 2>&1 || true
-fi
+hyprctl keyword windowrulev2 "unset, initialClass:.*" >>"$LOGFILE" 2>&1 || true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5️⃣ SUPERVISION LOOP (AUTHORITATIVE PHASE)
@@ -251,7 +221,6 @@ while ((SECONDS < END_TIME)); do
 
     if ((MATCH)) && [[ -z "${SEEN[$ADDR]-}" ]]; then
       echo "Placing window $ADDR (pid $PID, class $CLASS) → WS $TARGET_WS" >>"$LOGFILE"
-      # Dispatch works the same in both modes
       hyprctl dispatch movetoworkspacesilent \
         "$TARGET_WS,address:$ADDR" >>"$LOGFILE" 2>&1 || true
       SEEN[$ADDR]=1

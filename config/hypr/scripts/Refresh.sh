@@ -43,39 +43,16 @@ for pid in $(pidof rofi swaync ags swaybg); do
   sleep 0.1
 done
 
-# Restart waybar once (works with systemd user unit or manual launch setups)
-restart_waybar() {
-  local manage_with_systemd=0
-
-  if command -v systemctl >/dev/null 2>&1; then
-    if systemctl --user --quiet is-active waybar.service 2>/dev/null || systemctl --user --quiet is-enabled waybar.service 2>/dev/null; then
-      manage_with_systemd=1
-    fi
-  fi
-
-  if [ "$manage_with_systemd" -eq 1 ]; then
-    systemctl --user stop waybar.service >/dev/null 2>&1 || true
-  fi
-
-  pkill -x waybar >/dev/null 2>&1 || true
-  pkill -x '.waybar-wrapped' >/dev/null 2>&1 || true
-  sleep 0.2
-  if pgrep -x waybar >/dev/null 2>&1 || pgrep -x '.waybar-wrapped' >/dev/null 2>&1; then
-    pkill -9 -x waybar >/dev/null 2>&1 || true
-    pkill -9 -x '.waybar-wrapped' >/dev/null 2>&1 || true
-  fi
-  sleep 0.2
-
-  if [ "$manage_with_systemd" -eq 1 ]; then
-    if ! systemctl --user start waybar.service >/dev/null 2>&1; then
-      waybar >/dev/null 2>&1 &
-    fi
+# Reload or start waybar once
+if pidof waybar >/dev/null; then
+  if command -v waybar-msg >/dev/null 2>&1; then
+    waybar-msg cmd reload >/dev/null 2>&1 || true
   else
-    waybar >/dev/null 2>&1 &
+    killall -SIGUSR2 waybar 2>/dev/null || true
   fi
-}
-
-restart_waybar
+else
+  waybar &
+fi
 
 # relaunch swaync
 sleep 0.3
