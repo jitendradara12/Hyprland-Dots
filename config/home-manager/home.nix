@@ -23,7 +23,7 @@
     pkgs.btop
     pkgs.htop
     pkgs.fastfetch
-    pkgs.kitty
+    # pkgs.kitty #It crashes!
   ];
 
   # 2. Programs with built-in Home Manager modules go here
