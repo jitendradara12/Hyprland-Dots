@@ -24,6 +24,106 @@ LOCK_FILE="/tmp/dropdown_terminal_lock"
 LAST_TOGGLE_FILE="/tmp/dropdown_terminal_last_toggle"
 MIN_TOGGLE_INTERVAL_MS=250
 DROPDOWN_KITTY_CLASS="kitty-dropterm"
+CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+HYPR_DIR="$CONFIG_HOME/hypr"
+LUA_ENTRY="$HYPR_DIR/hyprland.lua"
+LEGACY_LUA_ENTRY="$CONFIG_HOME/hyprland.lua"
+
+if [[ -f "$LUA_ENTRY" || -f "$LEGACY_LUA_ENTRY" ]]; then
+  HYPR_CONFIG_MODE="lua"
+else
+  HYPR_CONFIG_MODE="conf"
+fi
+lua_escape() {
+  local value="$1"
+  value=${value//\\/\\\\}
+  value=${value//\"/\\\"}
+  value=${value//$'\n'/\\n}
+  printf '%s' "$value"
+}
+
+
+hypr_dispatch() {
+  local dispatcher="$1"
+  shift
+  local payload="$*"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    local command="$dispatcher"
+    if [ -n "$payload" ]; then
+      command="$dispatcher $payload"
+    fi
+    local escaped
+    escaped="$(lua_escape "$command")"
+    hyprctl dispatch "hl.dsp.exec_raw(\"$escaped\")"
+  else
+    hyprctl dispatch "$dispatcher" "$payload"
+  fi
+}
+
+hypr_exec_cmd() {
+  local command="$*"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    local escaped
+    escaped="$(lua_escape "$command")"
+    hyprctl dispatch "hl.dsp.exec_cmd(\"$escaped\")"
+  else
+    hyprctl dispatch exec "$command"
+  fi
+}
+
+lua_workspace_expr() {
+  local workspace="$1"
+  if [[ "$workspace" =~ ^-?[0-9]+$ ]]; then
+    printf '%s' "$workspace"
+  else
+    local escaped
+    escaped="$(lua_escape "$workspace")"
+    printf '"%s"' "$escaped"
+  fi
+}
+
+focus_window() {
+  local addr="$1"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    local selector escaped
+    selector="address:$addr"
+    escaped="$(lua_escape "$selector")"
+    hyprctl dispatch "hl.dsp.focus({ window = \"$escaped\" })"
+  else
+    hypr_dispatch focuswindow "address:$addr"
+  fi
+}
+
+set_window_floating() {
+  local addr="$1"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    hyprctl dispatch "hl.dsp.window.float({ window = 'address:$addr', action = 'on' })"
+  else
+    hypr_dispatch setfloating "address:$addr"
+  fi
+}
+
+resize_window_exact() {
+  local addr="$1"
+  local width="$2"
+  local height="$3"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    hyprctl dispatch "hl.dsp.window.resize({ window = 'address:$addr', x = $width, y = $height, exact = true })"
+  else
+    hypr_dispatch resizewindowpixel "exact $width $height,address:$addr"
+  fi
+}
+
+move_window_exact() {
+  local addr="$1"
+  local x="$2"
+  local y="$3"
+  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
+    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', x = $x, y = $y, exact = true })"
+  else
+    hypr_dispatch movewindowpixel "exact $x $y,address:$addr"
+  fi
+}
 
 # Dropdown size and position configuration (percentages)
 WIDTH_PERCENT=65  # Width as percentage of screen width

@@ -19,10 +19,21 @@
 # This is for changing kb_layouts. Set kb_layouts in 
 
 MAP_FILE="$HOME/.cache/kb_layout_per_window"
-USER_CFG="$HOME/.config/hypr/UserConfigs/UserSettings.conf"
-SYS_CFG="$HOME/.config/hypr/configs/SystemSettings.conf"
-ICON="$HOME/.config/swaync/images/ja.png"
+ICON="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/ja.png"
 SCRIPT_NAME="$(basename "$0")"
+SCRIPT_PATH="$(readlink -f "$0")"
+
+# Detect active Hyprland config mode
+config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+hypr_dir="$config_home/hypr"
+lua_entry="$hypr_dir/hyprland.lua"
+legacy_lua_entry="$config_home/hyprland.lua"
+
+if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
+    hypr_config_mode="lua"
+else
+    hypr_config_mode="conf"
+fi
 
 # Ensure map file exists
 touch "$MAP_FILE"

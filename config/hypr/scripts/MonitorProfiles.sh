@@ -12,13 +12,46 @@ if pidof rofi > /dev/null; then
   pkill rofi
 fi
 
+# Detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
+config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+hypr_dir="$config_home/hypr"
+lua_entry="$hypr_dir/hyprland.lua"
+legacy_lua_entry="$config_home/hyprland.lua"
+if [[ -n "$HYPR_CONFIG_MODE" ]]; then
+    case "${HYPR_CONFIG_MODE,,}" in
+        lua) hypr_config_mode="lua" ;;
+        conf|hyprlang) hypr_config_mode="conf" ;;
+        auto) hypr_config_mode="" ;;
+        *) hypr_config_mode="" ;;
+    esac
+fi
+
+if [[ -z "$hypr_config_mode" ]]; then
+    if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
+        hypr_config_mode="lua"
+    else
+        hypr_config_mode="conf"
+    fi
+fi
+
 # Variables
-iDIR="$HOME/.config/swaync/images"
-SCRIPTSDIR="$HOME/.config/hypr/scripts"
-monitor_dir="$HOME/.config/hypr/Monitor_Profiles"
-target="$HOME/.config/hypr/monitors.conf"
-rofi_theme="$HOME/.config/rofi/config-Monitors.rasi"
-msg='❗NOTE:❗ This will overwrite $HOME/.config/hypr/monitors.conf'
+iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images"
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
+monitor_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/Monitor_Profiles"
+target_conf="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.conf"
+target_lua_user="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/monitors.lua"
+target_lua_legacy="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/monitors.lua"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-Monitors.rasi"
+
+if [[ "$hypr_config_mode" == "lua" ]]; then
+    profile_ext="lua"
+    target="$target_lua_user"
+    msg="❗NOTE:❗ This will overwrite ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/monitors.lua"
+else
+    profile_ext="conf"
+    target="$target_conf"
+    msg="❗NOTE:❗ This will overwrite ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.conf"
+fi
 
 # Define the list of files to ignore
 ignore_files=(

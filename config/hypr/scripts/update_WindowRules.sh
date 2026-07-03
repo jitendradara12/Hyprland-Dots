@@ -7,7 +7,7 @@
 # ==================================================
 # Script to update WindowRules config if Hyprland version is >= 0.53
 
-CONFIGS_DIR="$HOME/.config/hypr/configs"
+CONFIGS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/configs"
 TARGET_FILE="$CONFIGS_DIR/WindowRules.conf"
 V3_FILE="$CONFIGS_DIR/WindowRules-config-v3.conf"
 

@@ -71,6 +71,18 @@ fi
 
 echo "=== Deploy '$CMD' → WS $TARGET_WS @ $(date) ===" >>"$LOGFILE"
 
+# Detect active Hyprland config mode
+config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+hypr_dir="$config_home/hypr"
+lua_entry="$hypr_dir/hyprland.lua"
+legacy_lua_entry="$config_home/hyprland.lua"
+
+if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
+    hypr_config_mode="lua"
+else
+    hypr_config_mode="conf"
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 1️⃣ HYPRLAND READINESS GATE
 # ─────────────────────────────────────────────────────────────────────────────

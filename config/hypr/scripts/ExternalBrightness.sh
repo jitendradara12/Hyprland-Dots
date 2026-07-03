@@ -10,15 +10,122 @@
 set -u
 
 step=10
-vcp_code=10
+min=5
+vcp_code=10  # MCCS VCP feature 0x10: Luminance (brightness)
+state_file="/tmp/external_brightness_bus"
+cache_file="/tmp/external_brightness_displays.cache"
+cache_ttl=300 # 5 minutes
 
-usage() {
-  cat <<'EOF'
-Usage: ExternalBrightness.sh [--get|--inc|--dec|--set N] [--display N]
-Env:
-  DDCUTIL_DISPLAY  Optional display number passed to ddcutil --display
-  DDCUTIL_OPTS     Extra options passed to ddcutil (e.g. "--sleep-multiplier 0.2")
-EOF
+# Detect active Hyprland config mode (Lua entrypoint vs legacy .conf includes)
+config_home="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+hypr_dir="$config_home/hypr"
+lua_entry="$hypr_dir/hyprland.lua"
+legacy_lua_entry="$config_home/hyprland.lua"
+
+if [[ -n "${HYPR_CONFIG_MODE:-}" ]]; then
+    case "${HYPR_CONFIG_MODE,,}" in
+        lua) hypr_config_mode="lua" ;;
+        conf|hyprlang) hypr_config_mode="conf" ;;
+        auto) hypr_config_mode="" ;;
+        *) hypr_config_mode="" ;;
+    esac
+fi
+
+if [[ -z "${hypr_config_mode:-}" ]]; then
+    if [[ -f "$lua_entry" || -f "$legacy_lua_entry" ]]; then
+        hypr_config_mode="lua"
+    else
+        hypr_config_mode="conf"
+    fi
+fi
+
+# Get list of displays: bus model index
+# Format: BUS|MODEL|INDEX
+get_displays() {
+    if [[ -f "$cache_file" ]]; then
+        local now mtime
+        now=$(date +%s)
+        mtime=$(stat -c %Y "$cache_file")
+        if (( now - mtime < cache_ttl )); then
+            cat "$cache_file"
+            return
+        fi
+    fi
+
+    local res
+    res=$(ddcutil detect --terse 2>/dev/null | awk '
+        /^Display/ { 
+            if (bus) {
+                count[model]++
+                print bus "|" model "|" count[model]
+            }
+            bus=""; model="Unknown"
+        }
+        /I2C bus:/ { bus=$0; sub(/.*\/dev\/i2c-/, "", bus) }
+        /Model:/ { model=$0; sub(/.*Model:[[:space:]]*/, "", model) }
+        END { 
+            if (bus) {
+                count[model]++
+                print bus "|" model "|" count[model]
+            }
+        }
+    ')
+    
+    if [[ -n "$res" ]]; then
+        echo "$res" > "$cache_file"
+        echo "$res"
+    fi
+}
+
+get_active_bus() {
+    local displays
+    displays=$(get_displays)
+    if [[ -z "$displays" ]]; then
+        return 1
+    fi
+    
+    local saved
+    if [[ -f "$state_file" ]]; then
+        saved=$(cat "$state_file")
+        # Check if saved bus still exists in current displays
+        if echo "$displays" | grep -q "^$saved|"; then
+            echo "$saved"
+            return 0
+        fi
+    fi
+    
+    # Default to first display's bus
+    echo "$displays" | head -n 1 | cut -d'|' -f1
+}
+
+set_active_bus() {
+    echo "$1" > "$state_file"
+}
+
+cycle_display() {
+    local displays
+    displays=$(get_displays)
+    [[ -z "$displays" ]] && return 1
+    
+    local current
+    current=$(get_active_bus) || return 1
+    
+    local next
+    next=$(echo "$displays" | awk -v current="$current" -F'|' '
+        {
+            a[n++] = $1
+        }
+        END {
+            for (i=0; i<n; i++) {
+                if (a[i] == current) {
+                    print a[(i+1)%n]
+                    exit
+                }
+            }
+            print a[0]
+        }
+    ')
+    set_active_bus "$next"
 }
 
 ddcutil_cmd() {

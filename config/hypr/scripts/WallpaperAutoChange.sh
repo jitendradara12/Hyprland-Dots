@@ -12,14 +12,13 @@
 #
 # NOTE: this script uses bash (not POSIX shell) for the RANDOM variable
 
-wallust_refresh=$HOME/.config/hypr/scripts/RefreshNoWaybar.sh
+wallust_refresh=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RefreshNoWaybar.sh
+SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
+# shellcheck source=/dev/null
+. "$SCRIPTSDIR/WallpaperCmd.sh"
 
 focused_monitor=$(hyprctl monitors | awk '/^Monitor/{name=$2} /focused: yes/{print name}')
-if command -v awww >/dev/null 2>&1; then
-	WWW="awww"
-else
-	WWW="swww"
-fi
+wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base_${focused_monitor}"
 
 if [[ $# -lt 1 ]] || [[ ! -d $1 ]]; then
   echo "Usage:
@@ -41,9 +40,12 @@ while true; do
 		done \
 		| sort -n | cut -d':' -f2- \
 		| while read -r img; do
-			$WWW img -o $focused_monitor "$img"
+			resize_mode="$(wallpaper_resize_mode "$img" "$focused_monitor")"
+			"$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$img"
+			mkdir -p "$(dirname "$wallpaper_base")"
+			cp -f "$img" "$wallpaper_base" || true
 			# Regenerate colors from the exact image path to avoid cache races
-			$HOME/.config/hypr/scripts/WallustSwww.sh "$img"
+			${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh "$img"
 			# Refresh UI components that depend on wallust output
 			$wallust_refresh
 			sleep $INTERVAL
