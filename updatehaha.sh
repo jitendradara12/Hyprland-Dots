@@ -16,18 +16,12 @@ if ! git remote | grep -q '^jakoolit$'; then
   git remote add jakoolit https://github.com/LinuxBeginnings/Hyprland-Dots
 fi
 
-# Check if repo is shallow and unshallow if needed
-if [ -f .git/shallow ]; then
-  echo "Shallow repository detected. Unshallow fetching from jakoolit..."
-  git fetch --unshallow jakoolit || git fetch jakoolit
-else
-  echo "Fetching latest changes from jakoolit..."
-  git fetch jakoolit
-fi
+echo "Fetching latest changes (depth 20) from jakoolit..."
+git fetch --depth 20 jakoolit
 
 echo "Merging jakoolit/main into current branch..."
 set +e
-git merge --no-ff -m "Merge upstream JaKooLit/Hyprland-Dots changes" jakoolit/main
+git merge --allow-unrelated-histories --no-ff -m "Merge upstream JaKooLit/Hyprland-Dots changes" jakoolit/main
 status=$?
 set -e
 
