@@ -11,6 +11,10 @@
 
 ## Changed:
 
+- `shadow range` changed to `2` from `3`
+
+---
+
 ## v2.3.25
 
 ## Fixed

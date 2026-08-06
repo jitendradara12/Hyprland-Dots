@@ -16,8 +16,14 @@ if ! git remote | grep -q '^jakoolit$'; then
   git remote add jakoolit https://github.com/LinuxBeginnings/Hyprland-Dots
 fi
 
-echo "Fetching latest changes from jakoolit..."
-git fetch jakoolit
+# Check if repo is shallow and unshallow if needed
+if [ -f .git/shallow ]; then
+  echo "Shallow repository detected. Unshallow fetching from jakoolit..."
+  git fetch --unshallow jakoolit || git fetch jakoolit
+else
+  echo "Fetching latest changes from jakoolit..."
+  git fetch jakoolit
+fi
 
 echo "Merging jakoolit/main into current branch..."
 set +e
@@ -26,8 +32,12 @@ status=$?
 set -e
 
 if [ $status -ne 0 ]; then
-  echo "Merge conflicts occurred. Please resolve the conflicts and commit the changes:"
-  echo "  git add -A && git commit"
+  if git status | grep -q "unmerged paths"; then
+    echo "Merge conflicts occurred. Please resolve the conflicts in the files listed in 'git status' and commit:"
+    echo "  git add -A && git commit"
+  else
+    echo "Merge failed with error (exit code $status)."
+  fi
 else
   echo "Successfully merged upstream changes!"
 fi
