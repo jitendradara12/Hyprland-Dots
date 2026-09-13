@@ -33,4 +33,6 @@
 
 //@theme "~/.config/rofi/themes/KooL_style-9.rasi"
 
-@theme "~/.config/rofi/themes/KooL_LonerOrZ.rasi"
+//@theme "~/.config/rofi/themes/KooL_LonerOrZ.rasi"
+
+@theme "/home/sastauser/.config/rofi/themes/KooL_LonerOrZ.rasi"
