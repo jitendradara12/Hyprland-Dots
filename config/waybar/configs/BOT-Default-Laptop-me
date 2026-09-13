@@ -27,7 +27,6 @@
 		"custom/separator#dot-line",
 		"group/mobo_drawer",
 		"custom/separator#blank_2",
-		"custom/playerctl",
 	],
 	
 	"modules-center": [
