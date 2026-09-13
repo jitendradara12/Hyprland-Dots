@@ -24,17 +24,12 @@ for item_path in "$DOTFILES_CONFIG_DIR"/*; do
     [ -e "$item_path" ] || continue
     item_name=$(basename "$item_path")
     
-    # Skip standard metadata / Git / ignore files that shouldn't be symlinked to ~/.config
-    if [[ "$item_name" == "." || "$item_name" == ".." || "$item_name" == ".git" || "$item_name" == ".gitignore" || "$item_name" == "README.md" || "$item_name" == "AGENTS.md" || "$item_name" == "tool_state" ]]; then
+    # Skip standard metadata / Git / ignore files and files managed by NixOS/Home Manager (like zshrc)
+    if [[ "$item_name" == "." || "$item_name" == ".." || "$item_name" == ".git" || "$item_name" == ".gitignore" || "$item_name" == "README.md" || "$item_name" == "AGENTS.md" || "$item_name" == "tool_state" || "$item_name" == "zshrc" ]]; then
         continue
     fi
     
-    # If the item is 'zshrc', link it to ~/.zshrc instead of ~/.config/zshrc
-    if [ "$item_name" = "zshrc" ]; then
-        target_path="$HOME/.zshrc"
-    else
-        target_path="$TARGET_DIR/$item_name"
-    fi
+    target_path="$TARGET_DIR/$item_name"
     
     if [ -e "$target_path" ] || [ -L "$target_path" ]; then
         # If it's already a symlink pointing to the correct source, skip it
@@ -68,6 +63,12 @@ for old_symlink in "zshrc" "dns.sh" "updatehaha.sh" "AGENTS.md" "tool_state" "RE
         rm "$TARGET_DIR/$old_symlink"
     fi
 done
+
+# If ~/.zshrc is a symlink pointing to our repo, remove it so NixOS Home Manager manages it
+if [ -L "$HOME/.zshrc" ] && [ "$(readlink -f "$HOME/.zshrc")" = "$(readlink -f "$DOTFILES_CONFIG_DIR/zshrc")" ]; then
+    echo "🧹 Removing legacy ~/.zshrc symlink (managed by NixOS Home Manager)"
+    rm "$HOME/.zshrc"
+fi
 
 echo
 echo "✓ Sync complete! All dotfiles are now symlinked."
