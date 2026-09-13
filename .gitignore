@@ -159,4 +159,5 @@ config/Code/CachedExtensionVSIXs/*
 config/Code/Cache/*
 config/Code/
 config/gtk-3.0/
+config/opencode/service.json
 config/AGENTS.md
