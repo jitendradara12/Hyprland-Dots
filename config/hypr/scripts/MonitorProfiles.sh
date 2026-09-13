@@ -40,8 +40,7 @@ SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 monitor_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/Monitor_Profiles"
 target_conf="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.conf"
 target_lua_user="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/monitors.lua"
-target_lua_legacy="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/lua/monitors.lua"
-rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-Monitors.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-Monitors.rasi"
 
 if [[ "$hypr_config_mode" == "lua" ]]; then
     profile_ext="lua"
@@ -59,22 +58,28 @@ ignore_files=(
 )
 
 # list of Monitor Profiles, sorted alphabetically with numbers first
-mon_profiles_list=$(find -L "$monitor_dir" -maxdepth 1 -type f | sed 's/.*\///' | sed 's/\.conf$//' | sort -V)
+mon_profiles_list=$(find -L "$monitor_dir" -maxdepth 1 -type f -name "*.${profile_ext}" | sed 's/.*\///' | sed "s/\.${profile_ext}$//" | sort -V)
 
 # Remove ignored files from the list
 for ignored_file in "${ignore_files[@]}"; do
     mon_profiles_list=$(echo "$mon_profiles_list" | grep -v -E "^$ignored_file$")
 done
+if [[ -z "$mon_profiles_list" ]]; then
+    notify-send -u low -i "$iDIR/ja.png" "Monitor Profiles" "No .${profile_ext} profiles found in $monitor_dir"
+    exit 1
+fi
 
 # Rofi Menu
-chosen_file=$(echo "$mon_profiles_list" | rofi -i -dmenu -config $rofi_theme -mesg "$msg")
+"${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
+chosen_file=$(echo "$mon_profiles_list" | rofi -i -dmenu -config "$rofi_theme" -mesg "$msg")
 
 if [[ -n "$chosen_file" ]]; then
-    full_path="$monitor_dir/$chosen_file.conf"
+    full_path="$monitor_dir/$chosen_file.$profile_ext"
+    mkdir -p "$(dirname "$target")"
     cp "$full_path" "$target"
     
     notify-send -u low -i "$iDIR/ja.png" "$chosen_file" "Monitor Profile Loaded"
 fi
 
 sleep 1
-${SCRIPTSDIR}/RefreshNoWaybar.sh &
+"${SCRIPTSDIR}/RefreshNoWaybar.sh" &

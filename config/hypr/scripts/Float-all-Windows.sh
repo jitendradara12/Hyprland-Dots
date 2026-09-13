@@ -20,4 +20,14 @@ fi
 
 # Get current workspace ID
 ws=$(hyprctl activeworkspace -j | jq -r .id)
-hyprctl clients -j | jq -r --arg ws "$ws" '.[] | select(.workspace.id == ($ws|tonumber)) | .address' | xargs -r -I {} hyprctl dispatch togglefloating address:{}
+
+# Process all windows on the current workspace
+if [[ "$hypr_config_mode" == "lua" ]]; then
+    # In Lua mode, use the native Lua API via hl.dsp.window.float
+    hyprctl clients -j | jq -r --arg ws "$ws" '.[] | select(.workspace.id == ($ws|tonumber)) | .address' | while read -r addr; do
+        hyprctl dispatch "hl.dsp.window.float({ window = 'address:${addr}', action = 'toggle' })" >/dev/null 2>&1
+    done
+else
+    # Legacy Hyprlang mode
+    hyprctl clients -j | jq -r --arg ws "$ws" '.[] | select(.workspace.id == ($ws|tonumber)) | .address' | xargs -r -I {} hyprctl dispatch togglefloating address:{}
+fi

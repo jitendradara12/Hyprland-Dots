@@ -10,12 +10,37 @@
 # Variables
 scriptsDir=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts
 wallpaper=${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current
-waybar_style="${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style/[Extra] Neon Circuit.css"
 kvantum_theme="catppuccin-mocha-blue"
 color_scheme="prefer-dark"
 gtk_theme="Flat-Remix-GTK-Blue-Dark"
 icon_theme="Flat-Remix-Blue-Dark"
 cursor_theme="Bibata-Modern-Ice"
+wallust_args=()
+# shellcheck source=/dev/null
+if [ -f "$scriptsDir/WallustConfig.sh" ]; then
+    . "$scriptsDir/WallustConfig.sh"
+fi
+
+set_interface_pref_with_retry() {
+    local key="$1"
+    local value="$2"
+    local expected="$3"
+    local current=""
+    local attempt=0
+    local max_attempts=6
+
+    while [ "$attempt" -lt "$max_attempts" ]; do
+        gsettings set org.gnome.desktop.interface "$key" "$value" > /dev/null 2>&1 || true
+        current="$(gsettings get org.gnome.desktop.interface "$key" 2>/dev/null || true)"
+        if [ "$current" = "$expected" ]; then
+            return 0
+        fi
+        attempt=$((attempt + 1))
+        sleep 0.25
+    done
+
+    return 1
+}
 
 if command -v awww >/dev/null 2>&1; then
     WWW="awww"
@@ -38,36 +63,22 @@ if [ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.initial_startup_done" ]; then
     gsettings set org.gnome.desktop.interface cursor-size 24 > /dev/null 2>&1 || true
     # Initialize wallust and wallpaper
 	if [ -f "$wallpaper" ]; then
-		wallust run -s $wallpaper > /dev/null 
+		wallust "${wallust_args[@]}" run -s "$wallpaper" > /dev/null 
 		$WWW query || $DAEMON && $swww $wallpaper $effect
 	    "$scriptsDir/WallustSwww.sh" > /dev/null 2>&1 & 
 	fi
-     
-    # initiate GTK dark mode and apply icon and cursor theme
-    gsettings set org.gnome.desktop.interface color-scheme $color_scheme > /dev/null 2>&1 &
-    gsettings set org.gnome.desktop.interface gtk-theme $gtk_theme > /dev/null 2>&1 &
-    gsettings set org.gnome.desktop.interface icon-theme $icon_theme > /dev/null 2>&1 &
-    gsettings set org.gnome.desktop.interface cursor-theme $cursor_theme > /dev/null 2>&1 &
-    gsettings set org.gnome.desktop.interface cursor-size 24 > /dev/null 2>&1 &
 
      # NIXOS initiate GTK dark mode and apply icon and cursor theme
-	if [ -n "$(grep -i nixos < /etc/os-release)" ]; then
-      gsettings set org.gnome.desktop.interface color-scheme "'$color_scheme'" > /dev/null 2>&1 &
-      dconf write /org/gnome/desktop/interface/gtk-theme "'$gtk_theme'" > /dev/null 2>&1 &
-      dconf write /org/gnome/desktop/interface/icon-theme "'$icon_theme'" > /dev/null 2>&1 &
-      dconf write /org/gnome/desktop/interface/cursor-theme "'$cursor_theme'" > /dev/null 2>&1 &
-      dconf write /org/gnome/desktop/interface/cursor-size "24" > /dev/null 2>&1 &
+	if grep -qi nixos /etc/os-release; then
+      dconf write /org/gnome/desktop/interface/color-scheme "'$color_scheme'" > /dev/null 2>&1 || true
+      dconf write /org/gnome/desktop/interface/gtk-theme "'$gtk_theme'" > /dev/null 2>&1 || true
+      dconf write /org/gnome/desktop/interface/icon-theme "'$icon_theme'" > /dev/null 2>&1 || true
+      dconf write /org/gnome/desktop/interface/cursor-theme "'$cursor_theme'" > /dev/null 2>&1 || true
+      dconf write /org/gnome/desktop/interface/cursor-size "24" > /dev/null 2>&1 || true
 	fi
        
     # initiate kvantum theme
     kvantummanager --set "$kvantum_theme" > /dev/null 2>&1 &
-
-	# waybar style
-	#if [ -L "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/config" ]; then
-    ##    	ln -sf "$waybar_style" "${XDG_CONFIG_HOME:-$HOME/.config}/waybar/style.css"
-    #   	"$scriptsDir/Refresh.sh" > /dev/null 2>&1 & 
-	#fi
-
 
     # Create a marker file to indicate that the script has been executed.
     touch "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/.initial_startup_done"

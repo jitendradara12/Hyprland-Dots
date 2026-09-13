@@ -23,6 +23,9 @@
 //"gtk-layer-shell": true,
   
 "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"group/notify",	
   "clock#vertical",
     
@@ -57,8 +60,7 @@
 "backlight/slider": {
 	"min": 0,
 	"max": 100,
-	"orientation": "vertical",
-	"device": "intel_backlight"
+	"orientation": "vertical"
 },
 
 }

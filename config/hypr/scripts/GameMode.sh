@@ -56,13 +56,25 @@ if [ "$HYPRGAMEMODE" = "true" ] || [ "$HYPRGAMEMODE" = "1" ] ; then
     sleep 0.1
     exit
 else
-\t"$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" && "$WWW_CMD" img "$HOME/.config/rofi/.current_wallpaper" &
-	sleep 0.1
-	${SCRIPTSDIR}/WallustSwww.sh
-	sleep 0.5
-  hyprctl reload
-  ${SCRIPTSDIR}/Refresh.sh
-  notify-send -e -u normal -i "$notif" " Gamemode:" " disabled"
-  exit
+    # DISABLE Game Mode (Restore animations/decorations)
+    hyprctl reload
+
+    # Restore wallpaper using the official daemon script
+    if [[ -x "${SCRIPTSDIR}/WallpaperDaemon.sh" ]]; then
+        "${SCRIPTSDIR}/WallpaperDaemon.sh" &
+    fi
+    
+    sleep 0.1
+    if [[ -x "${SCRIPTSDIR}/WallustSwww.sh" ]]; then
+        "${SCRIPTSDIR}/WallustSwww.sh"
+    fi
+    sleep 0.5
+    
+    # Refresh UI components
+    if [[ -x "${SCRIPTSDIR}/Refresh.sh" ]]; then
+        "${SCRIPTSDIR}/Refresh.sh"
+    fi
+
+    notify-send -e -u normal -i "$notif" " Gamemode:" " disabled"
+    exit
 fi
-hyprctl reload

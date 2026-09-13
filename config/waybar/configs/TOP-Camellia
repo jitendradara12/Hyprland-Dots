@@ -27,6 +27,9 @@
 //"margin-right": 0,
 	
 "modules-left": [
+	"custom/separator#blank",
+	"custom/hypr_layout",
+	"custom/separator#blank",
 	"hyprland/workspaces#cam",
 	"custom/separator#line",
 	"mpris",
@@ -64,8 +67,7 @@
 "backlight/slider": {
 	"min": 0,
 	"max": 100,
-	"orientation": "horizontal",
-	"device": "intel_backlight"
+	"orientation": "horizontal"
 },
 
 "custom/backlight": {

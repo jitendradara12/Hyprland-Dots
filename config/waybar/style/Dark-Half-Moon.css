@@ -134,6 +134,7 @@ tooltip label {
 #custom-dot_update,
 #custom-swaync,
 #custom-hypridle,
+#custom-hypr_layout,
 #idle_inhibitor,
 #clock {
   color: #b8cc52;
@@ -273,17 +274,17 @@ tooltip label {
 #custom-menu {
   color: #59c2ff;
   background: #0f1419;
-  border-radius: 0px 15px 50px 0px;
+  border-radius: 50px 50px 50px 50px;
   margin: 5px 5px 5px 0px;
-  padding: 1px 15px;
+  padding: 10px 10px;
 }
 
 #custom-power {
   color: #d2a6ff;
   background: #0f1419;
-  border-radius: 15px 0px 0px 50px;
+  border-radius: 50px 50px 50px 50px;
   margin: 5px 0px;
-  padding: 2px 5px 2px 15px;
+  padding: 2px 5px 2px 5px;
 }
 
 #custom-lock {
@@ -335,4 +336,28 @@ tooltip label {
   min-height: 10px;
   border-radius: 5px;
   background-color: purple;
+}
+
+/* --- tray readability override (global) --- */
+#tray > *,
+#tray > .passive,
+#tray > .active,
+#tray > .needs-attention {
+  background: rgba(137, 180, 250, 0.55);
+  border-radius: 8px;
+  border: 1px solid rgba(17, 17, 27, 0.35);
+  margin-left: 1px;
+  margin-right: 1px;
+  padding-left: 2px;
+  padding-right: 2px;
+  color: rgba(17, 17, 27, 0.98);
+  -gtk-icon-effect: none;
+}
+
+#tray image {
+  background: transparent;
+  color: rgba(17, 17, 27, 0.98);
+  -gtk-icon-style: symbolic;
+  -gtk-icon-effect: none;
+  opacity: 1;
 }

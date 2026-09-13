@@ -3,18 +3,18 @@
 
 /* NOTE: This style is NOT vertical layout friendly! */
 
-@define-color white          #F2F2F2;
-@define-color black          #000000;
-@define-color text           #FFFFFF;
-@define-color lightgray      #686868;
-@define-color darkgray       #353535;
+@define-color white      	#F2F2F2;
+@define-color black      	#000000;
+@define-color text       	#FFFFFF;
+@define-color lightgray  	#686868;
+@define-color darkgray   	#353535;
 
-@define-color transparent    rgba(1, 1, 1, 0.5);
-@define-color teal-trans    rgba(1, 117, 84, 0.5);
-@define-color cyan            rgba(53, 140, 169, 1);
+@define-color transparent	rgba(1, 1, 1, 0.5);
+@define-color teal-trans	rgba(1, 117, 84, 0.5);
+@define-color cyan			rgba(53, 140, 169, 1);
 
 @define-color background-module     @background-alt;
-@define-color background-module2    @background;
+@define-color background-module2	@background;
 @define-color border-color          @color12;
 @define-color button-color          @color10;
 @define-color button-hover          @color13;
@@ -156,6 +156,7 @@ tooltip {
 #custom-lock,
 #custom-hint,
 #custom-hypridle,
+#custom-hypr_layout,
 #custom-menu,
 #custom-playerctl,
 #custom-power_vertical,
@@ -173,7 +174,7 @@ tooltip {
 #custom-weather.clearNight,
 #custom-weather.cloudyFoggyDay,
 #custom-weather.cloudyFoggyNight,
-#custom-weather.default, 
+#custom-weather.default,
 #custom-weather.rainyDay,
 #custom-weather.rainyNight,
 #custom-weather.severe,
@@ -258,7 +259,7 @@ tooltip {
 #custom-weather.clearNight,
 #custom-weather.cloudyFoggyDay,
 #custom-weather.cloudyFoggyNight,
-#custom-weather.default, 
+#custom-weather.default,
 #custom-weather.rainyDay,
 #custom-weather.rainyNight,
 #custom-weather.severe,

@@ -11,6 +11,7 @@
 notif="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images/ja.png"
 persist_layout_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/PersistWorkspaceLayout.sh"
 layouts=(master dwindle scrolling monocle)
+quiet_mode=0
 
 normalize_layout() {
   case "$1" in
@@ -206,6 +207,11 @@ set_layout() {
     return 1
   fi
 }
+
+if [[ "${1:-}" == "--quiet" || "${1:-}" == "--no-notify" ]]; then
+  quiet_mode=1
+  shift
+fi
 
 current="$(get_layout)"
 arg="${1:-toggle}"

@@ -20,10 +20,10 @@ SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 focused_monitor=$(hyprctl monitors | awk '/^Monitor/{name=$2} /focused: yes/{print name}')
 wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base_${focused_monitor}"
 
-if [[ $# -lt 1 ]] || [[ ! -d $1 ]]; then
-  echo "Usage:
+if [[ $# -lt 1 ]] || [[ ! -d $1   ]]; then
+	echo "Usage:
 	$0 <dir containing images>"
-  exit 1
+	exit 1
 fi
 
 # Edit below to control the images transition (swww/awww)
@@ -49,6 +49,6 @@ while true; do
 			# Refresh UI components that depend on wallust output
 			$wallust_refresh
 			sleep $INTERVAL
-			
+
 		done
 done

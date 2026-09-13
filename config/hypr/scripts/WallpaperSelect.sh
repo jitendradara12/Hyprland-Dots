@@ -15,7 +15,7 @@ SCRIPTSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts"
 # shellcheck source=/dev/null
 . "$SCRIPTSDIR/WallpaperCmd.sh"
 wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current"
-wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper"
+wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/.current_wallpaper"
 wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base"
 
 # Directory for swaync
@@ -28,9 +28,9 @@ TYPE="any"
 DURATION=2
 BEZIER=".43,1.19,1,.4"
 if [[ "$WWW_CMD" == "swww" || "$WWW_CMD" == "awww" ]]; then
-  SWWW_PARAMS="--transition-fps $FPS --transition-type $TYPE --transition-duration $DURATION --transition-bezier $BEZIER"
+  SWWW_PARAMS=(--transition-fps "$FPS" --transition-type "$TYPE" --transition-duration "$DURATION" --transition-bezier "$BEZIER")
 else
-  SWWW_PARAMS=""
+  SWWW_PARAMS=()
 fi
 
 
@@ -41,11 +41,11 @@ if ! command -v bc &>/dev/null; then
 fi
 
 # Variables
-rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/config-wallpaper.rasi"
+rofi_theme="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-wallpaper.rasi"
 focused_monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 
 per_monitor_wallpaper_current="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_current_${focused_monitor}"
-per_monitor_wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/rofi/.current_wallpaper_${focused_monitor}"
+per_monitor_wallpaper_link="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/.current_wallpaper_${focused_monitor}"
 per_monitor_wallpaper_base="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/wallpaper_effects/.wallpaper_base_${focused_monitor}"
 
 # Ensure focused_monitor is detected
@@ -161,20 +161,14 @@ apply_image_wallpaper() {
 
   kill_wallpaper_for_image
 
-  if ! pgrep -x "$WWW_DAEMON" >/dev/null; then
-    echo "Starting $WWW_DAEMON..."
-    "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" &
-  fi
-  # Wait for daemon to be ready before applying
-  for _ in {1..20}; do
-    "$WWW_CMD" query >/dev/null 2>&1 && break
-    sleep 0.1
-  done
-  "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS || {
+  wallpaper_ensure_daemon
+  local resize_mode
+  resize_mode="$(wallpaper_resize_mode "$image_path" "$focused_monitor")"
+  "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$image_path" "${SWWW_PARAMS[@]}" || {
     sleep 0.2
-    "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
+    "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$image_path" "${SWWW_PARAMS[@]}"
   }
-  "$WWW_CMD" img -o "$focused_monitor" "$image_path" $SWWW_PARAMS
+  "$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$image_path" "${SWWW_PARAMS[@]}"
 
   # Persist per-monitor wallpaper selection
   mkdir -p "$(dirname "$per_monitor_wallpaper_current")" "$(dirname "$per_monitor_wallpaper_link")"
@@ -185,10 +179,13 @@ apply_image_wallpaper() {
   cp -f "$image_path" "$wallpaper_base" || true
 
   # Run additional scripts (pass the image path to avoid cache race conditions)
-  "$SCRIPTSDIR/WallustSwww.sh" "$image_path"
-  sleep 2
+  if ! "$SCRIPTSDIR/WallustSwww.sh" "$image_path"; then
+    notify-send -i "$iDIR/error.png" "Wallust failed" "Wallpaper theme not refreshed"
+    return 1
+  fi
+  sleep 0.5
   "$SCRIPTSDIR/Refresh.sh"
-  sleep 1
+  sleep 0.3
 
 }
 
@@ -208,6 +205,7 @@ apply_video_wallpaper() {
 
 # Main function
 main() {
+  "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
   choice=$(menu | $rofi_command)
   choice=$(echo "$choice" | xargs)
   RANDOM_PIC_NAME=$(echo "$RANDOM_PIC_NAME" | xargs)

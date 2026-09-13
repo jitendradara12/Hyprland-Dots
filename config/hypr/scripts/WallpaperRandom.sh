@@ -26,15 +26,13 @@ TYPE="random"
 DURATION=1
 BEZIER=".43,1.19,1,.4"
 if [[ "$WWW_CMD" == "swww" || "$WWW_CMD" == "awww" ]]; then
-  SWWW_PARAMS="--transition-fps $FPS --transition-type $TYPE --transition-duration $DURATION --transition-bezier $BEZIER"
+  SWWW_PARAMS=(--transition-fps "$FPS" --transition-type "$TYPE" --transition-duration "$DURATION" --transition-bezier "$BEZIER")
 else
-  SWWW_PARAMS=""
+  SWWW_PARAMS=()
 fi
-if ! "$WWW_CMD" query >/dev/null 2>&1; then
-  "$WWW_DAEMON" "${WWW_DAEMON_ARGS[@]}" &
-fi
-
-"$WWW_CMD" img -o "$focused_monitor" "$RANDOMPICS" $SWWW_PARAMS
+wallpaper_ensure_daemon
+resize_mode="$(wallpaper_resize_mode "$RANDOMPICS" "$focused_monitor")"
+"$WWW_CMD" img -o "$focused_monitor" --resize "$resize_mode" "$RANDOMPICS" "${SWWW_PARAMS[@]}"
 
 wait $!
 mkdir -p "$(dirname "$wallpaper_base")"
@@ -45,5 +43,6 @@ if ! "$SCRIPTSDIR/WallustSwww.sh" "$RANDOMPICS"; then
 fi
 
 wait $!
-sleep 2
+sleep 0.5
 "$SCRIPTSDIR/Refresh.sh"
+
