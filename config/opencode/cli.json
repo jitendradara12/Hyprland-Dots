@@ -42,5 +42,7 @@
   "theme": {
     "name": "opencode"
   },
-  "mouse": true
+  "mouse": true,
+  "plugins": ["@prevalentware/opencode-goal-plugin"]
+
 }

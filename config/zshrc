@@ -17,3 +17,4 @@ fi
 
 # Enable vi command line editing mode (vi keybindings)
 bindkey -v
+set -o vi
