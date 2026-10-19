@@ -140,6 +140,7 @@ shotswappy() {
 		wl-copy <"$tmpfile"
     notify_view "swappy"
   fi
+  rm -f "$tmpfile"
 }
 
 if [[ ! -d "$dir" ]]; then

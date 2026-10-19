@@ -3,7 +3,5 @@
   "skills": {
     "paths": ["/home/sastauser/.agents/skills"]
   },
-  "plugins": ["@prevalentware/opencode-goal-plugin"],
   "plugin": ["opencode-wakatime"]
-
 }

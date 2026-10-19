@@ -15,3 +15,8 @@
 --     monitor = "eDP-1",
 --     layout = "scrolling",
 -- })
+hl.workspace_rule({ workspace = "3", monitor = "eDP-1", layout = "dwindle" })
+hl.workspace_rule({ workspace = "9", monitor = "eDP-1", layout = "scrolling" })
+hl.workspace_rule({ workspace = "10", monitor = "eDP-1", layout = "dwindle" })
+hl.workspace_rule({ workspace = "4", monitor = "eDP-1", layout = "monocle" })
+hl.workspace_rule({ workspace = "5", monitor = "eDP-1", layout = "dwindle" })

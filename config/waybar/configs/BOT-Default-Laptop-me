@@ -43,4 +43,30 @@
 		"custom/separator#dot-line",
 		"custom/power",
 	],
+
+	"group/mobo_drawer": {
+		"orientation": "inherit",
+		"drawer": {
+			"transition-duration": 500,
+			"children-class": "cpu",
+			"transition-left-to-right": true
+		},
+		"modules": [
+			"custom/temperature",
+			"cpu",
+			"power-profiles-daemon",
+			"memory",
+			"disk",
+		]
+	},
+
+	"custom/temperature": {
+		"exec": "$HOME/.config/hypr/scripts/WaybarTemperature-me.py",
+		"return-type": "json",
+		"interval": 3,
+		"format": "{}",
+		"tooltip": true,
+		"on-click-right": "$HOME/.config/hypr/scripts/WaybarScripts.sh --nvtop",
+		"on-click": "$HOME/.config/hypr/scripts/WaybarScripts.sh --btop"
+	},
 }

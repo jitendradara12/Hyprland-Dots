@@ -7,17 +7,19 @@
     "single": false
   },
   "prompt": {
-    "paste": "compact"
+    "paste": "compact",
+    "editor": true
   },
   "session": {
     "sidebar": "auto",
     "scrollbar": true,
-    "thinking": "show",
+    "thinking": "hide",
     "terminal": true,
     "markdown": "rendered",
     "grouping": "auto",
     "image_preview": false,
-    "new_location": "launch"
+    "new_location": "launch",
+    "verbosity": "high"
   },
   "animations": true,
   "tabs": {

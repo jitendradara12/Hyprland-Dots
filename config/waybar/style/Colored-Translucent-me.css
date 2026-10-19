@@ -116,6 +116,7 @@ tooltip {
 #pulseaudio-slider,
 #taskbar,
 #temperature,
+#custom-temperature,
 #tray,
 #window,
 #wireplumber,
@@ -288,11 +289,13 @@ label:focus {
 }
 
 #keyboard-state,
+#custom-temperature,
 #temperature {
   color: @accent6;
   /* background-color: #f0932b; */
 }
 
+#custom-temperature.critical,
 #temperature.critical {
   background-color: @critical;
 }
