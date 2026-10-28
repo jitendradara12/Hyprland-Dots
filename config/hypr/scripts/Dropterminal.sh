@@ -24,55 +24,28 @@ LOCK_FILE="/tmp/dropdown_terminal_lock"
 LAST_TOGGLE_FILE="/tmp/dropdown_terminal_last_toggle"
 MIN_TOGGLE_INTERVAL_MS=250
 DROPDOWN_KITTY_CLASS="kitty-dropterm"
-CONFIG_HOME="${XDG_CONFIG_HOME:-${XDG_CONFIG_HOME:-$HOME/.config}}"
-HYPR_DIR="$CONFIG_HOME/hypr"
-LUA_ENTRY="$HYPR_DIR/hyprland.lua"
-LEGACY_LUA_ENTRY="$CONFIG_HOME/hyprland.lua"
-
-if [[ -f "$LUA_ENTRY" || -f "$LEGACY_LUA_ENTRY" ]]; then
-  HYPR_CONFIG_MODE="lua"
-else
-  HYPR_CONFIG_MODE="conf"
-fi
-
 focus_window() {
   local addr="$1"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.focus({ window = 'address:$addr' })" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1 || true
-  fi
+  hyprctl dispatch "hl.dsp.focus({ window = 'address:$addr' })" >/dev/null 2>&1 || true
 }
 
 set_window_floating() {
   local addr="$1"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.window.float({ window = 'address:$addr', action = 'on' })" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch setfloating "address:$addr" >/dev/null 2>&1 || true
-  fi
+  hyprctl dispatch "hl.dsp.window.float({ window = 'address:$addr', action = 'on' })" >/dev/null 2>&1 || true
 }
 
 resize_window_exact() {
   local addr="$1"
   local width="$2"
   local height="$3"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.window.resize({ window = 'address:$addr', x = $width, y = $height, exact = true })" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch resizewindowpixel "exact $width $height,address:$addr" >/dev/null 2>&1 || true
-  fi
+  hyprctl dispatch "hl.dsp.window.resize({ window = 'address:$addr', x = $width, y = $height, exact = true })" >/dev/null 2>&1 || true
 }
 
 move_window_exact() {
   local addr="$1"
   local x="$2"
   local y="$3"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', x = $x, y = $y, exact = true })" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch movewindowpixel "exact $x $y,address:$addr" >/dev/null 2>&1 || true
-  fi
+  hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', x = $x, y = $y, exact = true })" >/dev/null 2>&1 || true
 }
 
 # Dropdown size and position configuration (percentages)
@@ -117,6 +90,12 @@ done
 TERMINAL_CMD="$*"
 if [[ "$TERMINAL_CMD" == kitty* ]] && [[ "$TERMINAL_CMD" != *"--class"* ]] && [[ "$TERMINAL_CMD" != *"--name"* ]] && [[ "$TERMINAL_CMD" != *"--app-id"* ]]; then
   TERMINAL_CMD="$TERMINAL_CMD --class $DROPDOWN_KITTY_CLASS --app-id $DROPDOWN_KITTY_CLASS"
+fi
+if [[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty.conf" ]]; then
+  export KITTY_CONFIG_DIRECTORY="${KITTY_CONFIG_DIRECTORY:-${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs}"
+  if [[ "$TERMINAL_CMD" == kitty* ]] && [[ "$TERMINAL_CMD" != *"--config"* ]] && [[ "$TERMINAL_CMD" != *"-c "* ]]; then
+    TERMINAL_CMD="$TERMINAL_CMD --config ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty.conf"
+  fi
 fi
 
 get_epoch_ms() {
@@ -469,6 +448,22 @@ find_terminal_by_class() {
     '.[] | select((.class == $CLASS) or (.initialClass == $CLASS)) | .address' | head -1
 }
 
+# Class the terminal window we are about to spawn is expected to report.
+#
+# Dropterminal forces kitty to $DROPDOWN_KITTY_CLASS (see the argument handling
+# near the top of the script), so for kitty the class is known exactly. Other
+# terminals keep their own class, which we cannot know for certain; fall back to
+# the binary name and compare case-insensitively.
+dropdown_expected_class() {
+  local cmd="$1"
+  if [[ "$cmd" == kitty* ]]; then
+    printf '%s\n' "$DROPDOWN_KITTY_CLASS"
+    return 0
+  fi
+  local bin="${cmd%% *}"
+  printf '%s\n' "${bin##*/}"
+}
+
 # Function to get stored monitor name
 get_terminal_monitor() {
   if [ -f "$ADDR_FILE" ] && [ -s "$ADDR_FILE" ]; then
@@ -527,17 +522,13 @@ move_window_to_workspace_silent() {
   local addr="$2"
   local post_ws=""
 
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    local ws_expr
-    if [[ "$target_ws" =~ ^-?[0-9]+$ ]]; then
-      ws_expr="$target_ws"
-    else
-      ws_expr="'$target_ws'"
-    fi
-    hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', workspace = $ws_expr, follow = false })" >/dev/null 2>&1 || true
+  local ws_expr
+  if [[ "$target_ws" =~ ^-?[0-9]+$ ]]; then
+    ws_expr="$target_ws"
   else
-    hyprctl dispatch movetoworkspacesilent "$target_ws,address:$addr" >/dev/null 2>&1 || true
+    ws_expr="'$target_ws'"
   fi
+  hyprctl dispatch "hl.dsp.window.move({ window = 'address:$addr', workspace = $ws_expr, follow = false })" >/dev/null 2>&1 || true
   sleep 0.02
   post_ws=$(window_workspace_name "$addr")
   if workspace_matches_target "$target_ws" "$post_ws"; then
@@ -742,40 +733,51 @@ spawn_terminal() {
 
   debug_echo "Target position: ${target_x},${target_y}, size: ${width}x${height}"
 
-  # Get window count before spawning
+  # Snapshot existing windows, and the class our own window is expected to report
   local windows_before=$(hyprctl clients -j)
-  local count_before=$(echo "$windows_before" | jq 'length')
+  local expected_class
+  expected_class=$(dropdown_expected_class "$TERMINAL_CMD")
+  local before_addrs
+  before_addrs=$(echo "$windows_before" | jq -c '[.[].address]')
 
   # Launch terminal with pre-applied workspace/geometry hints to avoid visible zigzag.
   local launch_cmd="[workspace $SPECIAL_WS silent;float;size $width $height;move $target_x $target_y] $TERMINAL_CMD"
-  if [[ "$HYPR_CONFIG_MODE" == "lua" ]]; then
-    local escaped="${launch_cmd//\"/\\\"}"
-    hyprctl dispatch "hl.dsp.exec_cmd(\"$escaped\")" >/dev/null 2>&1 || true
-  else
-    hyprctl dispatch exec "$launch_cmd" >/dev/null 2>&1 || true
-  fi
+  local escaped="${launch_cmd//\"/\\\"}"
+  hyprctl dispatch "hl.dsp.exec_cmd(\"$escaped\")" >/dev/null 2>&1 || true
 
   local new_addr=""
   for _ in $(seq 1 20); do
-    local windows_after=$(hyprctl clients -j)
-    local recovered
-    recovered=$(echo "$windows_after" | jq -r --arg CLASS "$DROPDOWN_KITTY_CLASS" \
-      '.[] | select((.class == $CLASS) or (.initialClass == $CLASS)) | .address' | head -1)
-    if [ -n "$recovered" ] && [ "$recovered" != "null" ]; then
-      new_addr="$recovered"
+    local windows_after
+    windows_after=$(hyprctl clients -j 2>/dev/null)
+
+    # 1) Any window of the expected class.
+    new_addr=$(echo "$windows_after" | jq -r --arg CLASS "$expected_class" \
+      '.[] | select((((.class // "") | ascii_downcase) == ($CLASS | ascii_downcase))
+                  or (((.initialClass // "") | ascii_downcase) == ($CLASS | ascii_downcase)))
+            | .address' | head -1)
+
+    # 2) A window that is new since launch AND of the expected class.
+    #
+    # Only a window of the expected class may be adopted. Anything else that
+    # appeared at the same moment - most commonly a plain `kitty` autostarted by
+    # user_startup.lua while `--startup kitty` is running - must be left alone,
+    # otherwise it is recorded as the dropdown terminal and hidden on the
+    # special workspace.
+    if [ -z "$new_addr" ] || [ "$new_addr" = "null" ]; then
+      new_addr=$(echo "$windows_after" | jq -r \
+        --argjson BEFORE "$before_addrs" \
+        --arg CLASS "$expected_class" \
+        '.[] | select(.address as $a | ($BEFORE | index($a)) == null)
+              | select((((.class // "") | ascii_downcase) == ($CLASS | ascii_downcase))
+                       or (((.initialClass // "") | ascii_downcase) == ($CLASS | ascii_downcase)))
+              | .address' | head -1)
+    fi
+
+    if [ -n "$new_addr" ] && [ "$new_addr" != "null" ]; then
       break
     fi
 
-    local count_after=$(echo "$windows_after" | jq 'length')
-    if [ "$count_after" -gt "$count_before" ]; then
-      new_addr=$(comm -13 \
-        <(echo "$windows_before" | jq -r '.[].address' | sort) \
-        <(echo "$windows_after" | jq -r '.[].address' | sort) |
-        head -1)
-      if [ -n "$new_addr" ] && [ "$new_addr" != "null" ]; then
-        break
-      fi
-    fi
+    new_addr=""
     sleep 0.1
   done
 

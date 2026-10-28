@@ -61,8 +61,6 @@ USER_CONFIGS_PRESERVED_CONFS=(
   "kitty.conf"
   "ghostty.conf"
   "hyprview-layout.conf"
-  "LaptopDisplay.conf"
-  "WorkSpaceRules.conf"
 )
 
 usage() {
@@ -72,7 +70,8 @@ Usage: $(basename "$0") [--yes] [--dry-run] [--revert]
 Copies the repo's Hyprland Lua entrypoint into:
   $DEST_HYPR_DIR
 
-This preserves hyprland.conf as fallback and creates a full backup of the
+This migrates Hyprlang configuration to Lua and archives legacy .conf files
+into LegacyConfigs/<timestamp> while creating a full backup of the
 current Hyprland config directory before changing files.
 
 Options:
@@ -134,11 +133,11 @@ echo "[INFO] Source: $SRC_HYPR_DIR"
 echo "[INFO] Target: $DEST_HYPR_DIR"
 echo "[INFO] Backup: $BACKUP_DIR"
 if [ "$REVERT" -eq 1 ]; then
-  echo "[WARN] Revert mode: restores latest LegacyConfigs/<timestamp> .conf files in UserConfigs and configs."
+  echo "[WARN] Revert mode: restores latest LegacyConfigs/<timestamp> .conf files in UserConfigs, configs, and hypr root."
 else
-  echo "[WARN] This enables Hyprland's Lua entrypoint for builds that support hyprland.lua."
-  echo "[WARN] hyprland.conf remains in place as fallback; old .conf files move into LegacyConfigs/<timestamp>."
-  echo "[INFO] hypridle.conf and hyprlock*.conf stay as native .conf files because Hypridle/Hyprlock do not use Hyprland's Lua API."
+  echo "[WARN] This enables Hyprland's Lua entrypoint (project is Lua-only)."
+  echo "[WARN] Legacy .conf files (including hyprland.conf, monitors.conf, workspaces.conf) move into LegacyConfigs/<timestamp>."
+  echo "[INFO] hypridle.conf, hyprlock*.conf, and application-style.conf stay as native .conf files because they do not use Hyprland's Lua API."
 fi
 
 restore_latest_conf_backup() {
@@ -298,6 +297,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
     if [ -d "$CONFIGS_DIR" ]; then
       echo "[DRY-RUN] Would move configs/*.conf into: $CONFIGS_LEGACY_DIR"
     fi
+    echo "[DRY-RUN] Would move legacy root *.conf (hyprland.conf, monitors.conf, workspaces.conf) into: $DEST_HYPR_DIR/$LEGACY_CONFIGS_DIR_NAME/$MIGRATION_TS"
   fi
   exit 0
 fi
@@ -316,6 +316,7 @@ if [ "$REVERT" -eq 1 ]; then
   fi
   restore_latest_conf_backup "$USER_CONFIGS_DIR" "$USER_CONFIGS_DIR"
   restore_latest_conf_backup "$CONFIGS_DIR" "$CONFIGS_DIR"
+  restore_latest_conf_backup "$DEST_HYPR_DIR" "$DEST_HYPR_DIR"
   echo "[OK] Revert complete."
   echo "[INFO] Restart Hyprland to load restored .conf files."
   exit 0
@@ -459,6 +460,110 @@ def has_active_hyprlang_content_py(path):
     except Exception:
         return False
     return False
+
+def lua_has_active_content(path):
+    """True when a Lua file holds at least one statement.
+
+    The shipped UserConfigs templates are comment-only, and copy.sh restores
+    them before this migration runs, so "the file exists" is not evidence that
+    the user put anything in it.
+    """
+    if path is None or not path.exists():
+        return False
+    try:
+        for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = raw.strip()
+            if line and not line.startswith("--"):
+                return True
+    except Exception:
+        return False
+    return False
+
+NUMBER_RE = re.compile(r"^-?\d+(\.\d+)?$")
+ANIMATION_TRUE_WORDS = {"true", "yes", "on", "1", "enable", "enabled"}
+
+def parse_animations(path):
+    """Read the animation settings out of a hyprlang file.
+
+    Returns (enabled, curves, animations), where curves is a list of
+    (name, x1, y1, x2, y2) and animations a list of
+    (leaf, enabled, speed, curve, style-or-None). A line Hyprland itself would
+    reject is skipped rather than emitted as invalid Lua.
+    """
+    enabled = True
+    curves = []
+    animations = []
+    if path is None or not path.exists():
+        return enabled, curves, animations
+
+    in_block = False
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = strip_comment(raw)
+        if not line:
+            continue
+        if line.endswith("{"):
+            in_block = line[:-1].strip() == "animations"
+            continue
+        if line == "}":
+            in_block = False
+            continue
+
+        key, separator, value = line.partition("=")
+        if not separator:
+            continue
+        key = key.strip()
+        value = value.strip()
+
+        if key == "enabled" and in_block:
+            enabled = value.lower() in ANIMATION_TRUE_WORDS
+        elif key == "bezier":
+            parts = [part.strip() for part in value.split(",")]
+            if len(parts) == 5 and parts[0] and all(NUMBER_RE.match(part) for part in parts[1:]):
+                curves.append((parts[0], parts[1], parts[2], parts[3], parts[4]))
+        elif key == "animation":
+            parts = [part.strip() for part in value.split(",")]
+            if len(parts) >= 4 and parts[0] and NUMBER_RE.match(parts[2]):
+                style = ", ".join(part for part in parts[4:] if part)
+                animations.append((
+                    parts[0],
+                    parts[1].lower() in ANIMATION_TRUE_WORDS,
+                    parts[2],
+                    parts[3],
+                    style or None,
+                ))
+    return enabled, curves, animations
+
+def emit_animations_lua(enabled, curves, animations):
+    """Render parsed hyprlang animations as the Lua the config loads."""
+    lines = [
+        "-- Converted from UserAnimations.conf, the animation preset that was",
+        "-- chosen before the Hyprland Lua config took over.",
+        "",
+        "hl.config({",
+        "  animations = {",
+        f"    enabled = {'true' if enabled else 'false'},",
+        "  },",
+        "})",
+    ]
+    if curves:
+        lines.append("")
+    for name, x1, y1, x2, y2 in curves:
+        lines.append(
+            f'hl.curve({lua_string(name)}, {{ type = "bezier", points = {{ {{ {x1}, {y1} }}, {{ {x2}, {y2} }} }} }})'
+        )
+    if animations:
+        lines.append("")
+    for leaf, animation_enabled, speed, curve, style in animations:
+        options = [
+            f"leaf = {lua_string(leaf)}",
+            f"enabled = {'true' if animation_enabled else 'false'}",
+            f"speed = {speed}",
+            f"bezier = {lua_string(curve)}",
+        ]
+        if style:
+            options.append(f"style = {lua_string(style)}")
+        lines.append(f"hl.animation({{ {', '.join(options)} }})")
+    return lines
 
 def split_items(value):
     return [item.strip() for item in value.split(",") if item.strip()]
@@ -1270,23 +1375,23 @@ def normalize_bind_mods(mods):
     tokens = re.split(r"\s+", mods.strip())
     known = {
         "super": "SUPER",
-        "super_l": "SUPER_L",
-        "super_r": "SUPER_R",
+        "super_l": "SUPER",
+        "super_r": "SUPER",
         "shift": "SHIFT",
-        "shift_l": "SHIFT_L",
-        "shift_r": "SHIFT_R",
+        "shift_l": "SHIFT",
+        "shift_r": "SHIFT",
         "ctrl": "CTRL",
         "control": "CTRL",
-        "ctrl_l": "CTRL_L",
-        "ctrl_r": "CTRL_R",
-        "control_l": "CTRL_L",
-        "control_r": "CTRL_R",
+        "ctrl_l": "CTRL",
+        "ctrl_r": "CTRL",
+        "control_l": "CTRL",
+        "control_r": "CTRL",
         "alt": "ALT",
-        "alt_l": "ALT_L",
-        "alt_r": "ALT_R",
+        "alt_l": "ALT",
+        "alt_r": "ALT",
         "meta": "META",
-        "meta_l": "META_L",
-        "meta_r": "META_R",
+        "meta_l": "META",
+        "meta_r": "META",
         "mod2": "MOD2",
         "mod3": "MOD3",
         "mod5": "MOD5",
@@ -1475,10 +1580,10 @@ def lua_file_is_generated(lua_path):
 
 if files_out["monitors"].exists():
     print(f"[INFO] Preserving existing custom Lua monitors file: {files_out['monitors']}")
-elif monitor_entries and not files_match(monitors_conf_path, src_monitors_conf_path):
+elif monitor_entries and (src_monitors_conf_path is None or not src_monitors_conf_path.exists() or not files_match(monitors_conf_path, src_monitors_conf_path)):
     monitor_lines = [
         "-- Monitors migrated from monitors.conf (auto-generated).",
-        "-- Edit monitors.conf and rerun scripts/migrate-hypr-to-lua.sh to regenerate this file.",
+        "-- Edit ~/.config/hypr/UserConfigs/monitors.lua to modify monitors in Lua mode.",
         "",
     ]
     for spec in monitor_entries:
@@ -1494,10 +1599,10 @@ else:
 
 if files_out["workspaces"].exists():
     print(f"[INFO] Preserving existing custom Lua workspaces file: {files_out['workspaces']}")
-elif workspace_entries and not files_match(workspaces_conf_path, src_workspaces_conf_path):
+elif workspace_entries and (src_workspaces_conf_path is None or not src_workspaces_conf_path.exists() or not files_match(workspaces_conf_path, src_workspaces_conf_path)):
     workspace_lines = [
         "-- Workspace rules migrated from workspaces.conf (auto-generated).",
-        "-- Edit workspaces.conf and rerun scripts/migrate-hypr-to-lua.sh to regenerate this file.",
+        "-- Edit ~/.config/hypr/UserConfigs/workspaces.lua to modify workspace rules in Lua mode.",
         "",
     ]
     for spec in workspace_entries:
@@ -2285,6 +2390,26 @@ for name, source in [
     ("animations", animations_path),
     ("laptops", laptops_path),
 ]:
+    if (
+        name == "animations"
+        and files_out[name].exists()
+        and not lua_has_active_content(files_out[name])
+        and has_active_hyprlang_content_py(source)
+    ):
+        # copy.sh copies the repo's UserConfigs and then restores the user's own
+        # files, so a comment-only user_animations.lua at this point is the
+        # shipped placeholder, not a file the user wrote. On a hyprlang install
+        # the animation chosen from the Animations menu is still in
+        # UserAnimations.conf, so convert that: keeping the placeholder would
+        # drop the selection and lua/animations.lua would apply its defaults.
+        # A real preset (what Animations.sh copies) has active content and is
+        # preserved by the check below.
+        animations_enabled, animation_curves, animation_entries = parse_animations(source)
+        if animation_curves or animation_entries or not animations_enabled:
+            print(f"[INFO] Carrying the animations chosen in {source.name} into {files_out[name]}")
+            write_file(files_out[name], emit_animations_lua(
+                animations_enabled, animation_curves, animation_entries))
+            continue
     if files_out[name].exists():
         print(f"[INFO] Preserving existing custom Lua {name} file: {files_out[name]}")
         continue
@@ -2463,26 +2588,38 @@ local hyprDir = configHome .. "/hypr"
 local systemDir = hyprDir .. "/configs"
 local userDir = configHome .. "/hypr/UserConfigs"
 
-local function has_kvantum_qml_module()
-  local cmd = "find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/kvantum' -print -quit 2>/dev/null"
-  local pipe = io.popen(cmd, "r")
-  if not pipe then
-    return false
+local function qml_module_exists(subpath)
+  local candidate_roots = {
+    "/usr/lib/qt6/qml",
+    "/usr/lib64/qt6/qml",
+    "/usr/lib/x86_64-linux-gnu/qt6/qml",
+    "/usr/lib/aarch64-linux-gnu/qt6/qml",
+    "/usr/lib/qt5/qml",
+    "/usr/lib64/qt5/qml",
+    "/usr/lib/x86_64-linux-gnu/qt5/qml",
+    "/usr/lib/aarch64-linux-gnu/qt5/qml",
+    "/usr/lib/qt/qml",
+    "/usr/lib64/qt/qml",
+    "/usr/share/qt6/qml",
+    "/usr/share/qt5/qml",
+    "/usr/share/qml",
+  }
+  for _, root in ipairs(candidate_roots) do
+    local f = io.open(root .. "/" .. subpath, "r")
+    if f then
+      f:close()
+      return true
+    end
   end
-  local output = pipe:read("*a") or ""
-  pipe:close()
-  return output:match("%S") ~= nil
+  return false
+end
+
+local function has_kvantum_qml_module()
+  return qml_module_exists("kvantum") or qml_module_exists("org/kde/kvantum")
 end
 
 local function has_hyprland_qml_style_module()
-  local cmd = "find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/org/hyprland/style' -print -quit 2>/dev/null"
-  local pipe = io.popen(cmd, "r")
-  if not pipe then
-    return false
-  end
-  local output = pipe:read("*a") or ""
-  pipe:close()
-  return output:match("%S") ~= nil
+  return qml_module_exists("org/hyprland/style")
 end
 
 local function apply_qt_style_fallbacks()
@@ -2554,105 +2691,13 @@ if not loaded_user_split then
   load_optional(userDir .. "/user_overrides.lua") -- legacy single-file support
 end
 apply_qt_style_fallbacks()
-
--- Legacy compatibility: import UserKeybinds.conf when user_keybinds.lua is missing.
-do
-  local userKeybindsLua = userDir .. "/user_keybinds.lua"
-  local legacyUserKeybinds = userDir .. "/UserKeybinds.conf"
-
-  local hasUserLua = io.open(userKeybindsLua, "r")
-  if hasUserLua then
-    hasUserLua:close()
-  else
-    local legacy = io.open(legacyUserKeybinds, "r")
-    if legacy then
-      local function trim(value)
-        return (value or ""):gsub("^%s+", ""):gsub("%s+$", "")
-      end
-      local function strip_inline_comment(value)
-        return trim((value or ""):gsub("%s+#.*$", ""))
-      end
-      local function load_vars_from_file(path, vars)
-        local handle = io.open(path, "r")
-        if not handle then
-          return
-        end
-        for raw in handle:lines() do
-          local line = trim(raw)
-          if line ~= "" and not line:match("^#") then
-            local name, val = line:match("^%$([%w_]+)%s*=%s*(.+)$")
-            if name and val then
-              vars[name] = strip_inline_comment(val)
-            end
-          end
-        end
-        handle:close()
-      end
-      local vars = {}
-      local raw_lines = {}
-      local configDir = configHome .. "/hypr/configs"
-      local defaultsFile = userDir .. "/01-UserDefaults.conf"
-      local keybindsFile = configDir .. "/Keybinds.conf"
-      local systemSettingsFile = configDir .. "/SystemSettings.conf"
-
-      load_vars_from_file(systemSettingsFile, vars)
-      load_vars_from_file(keybindsFile, vars)
-      load_vars_from_file(defaultsFile, vars)
-
-      for line in legacy:lines() do
-        table.insert(raw_lines, line)
-        local trimmed = trim(line)
-        if trimmed ~= "" and not trimmed:match("^#") then
-          local var_name, var_value = trimmed:match("^%$([%w_]+)%s*=%s*(.+)$")
-          if var_name and var_value then
-            vars[var_name] = strip_inline_comment(var_value)
-          end
-        end
-      end
-      legacy:close()
-
-      local function expand_vars(value)
-        value = tostring(value or "")
-        for _ = 1, 8 do
-          local changed = false
-          value = value:gsub("%$([%w_]+)", function(name)
-            local replacement = vars[name]
-            if replacement ~= nil then
-              changed = true
-              return replacement
-            end
-            return "$" .. name
-          end)
-          if not changed then
-            break
-          end
-        end
-        return value
-      end
-
-      for _, line in ipairs(raw_lines) do
-        local trimmed = trim(line)
-        if trimmed ~= "" and not trimmed:match("^#") then
-          local keyword, value = trimmed:match("^([%w_]+)%s*=%s*(.+)$")
-          if keyword and value and (keyword:match("^bind") or keyword == "unbind") then
-            local expanded = expand_vars(value)
-            local cmd = "hyprctl keyword " .. keyword .. " " .. string.format("%q", expanded)
-            local ok = os.execute(cmd)
-            if not ok then
-              print("[WARN] Failed to apply legacy keybind via: " .. cmd)
-            end
-          end
-        end
-      end
-    end
-  end
-end
 LUA
 fi
 
 USER_CONFIGS_CONVERTED_CONFS=(
   "01-UserDefaults.conf"
   "ENVariables.conf"
+  "LaptopDisplay.conf"
   "Laptops.conf"
   "LayerRules.conf"
   "Startup_Apps.conf"
@@ -2661,6 +2706,7 @@ USER_CONFIGS_CONVERTED_CONFS=(
   "UserKeybinds.conf"
   "UserSettings.conf"
   "WindowRules.conf"
+  "WorkSpaceRules.conf"
 )
 
 move_converted_user_confs_to_legacy() {
@@ -2718,10 +2764,32 @@ move_conf_files_to_legacy() {
     echo "[OK] Moved $label/*.conf -> $legacy_dir"
   fi
 }
+move_root_confs_to_legacy() {
+  local root_dir="$1"
+  local legacy_dir="$2"
+  local moved=0
+  local conf_file
+
+  [ -d "$root_dir" ] || return 0
+  mkdir -p "$legacy_dir"
+
+  for conf_file in hyprland.conf monitors.conf workspaces.conf; do
+    if [ -f "$root_dir/$conf_file" ]; then
+      mv "$root_dir/$conf_file" "$legacy_dir/"
+      moved=1
+    fi
+  done
+
+  if [ "$moved" -eq 1 ]; then
+    echo "[OK] Moved root legacy *.conf (hyprland.conf, monitors.conf, workspaces.conf) -> $legacy_dir"
+  fi
+}
+
 print_conversion_coverage_summary() {
   echo "[INFO] Migration coverage summary (Hyprland Lua mode):"
   cat <<SUMMARY
 [INFO]   Converted .conf -> .lua:
+    - $DEST_HYPR_DIR/hyprland.conf -> $DEST_LUA_ENTRY
     - $DEST_MONITORS_CONF -> $DEST_LUA_MONITORS
     - $DEST_WORKSPACES_CONF -> $DEST_LUA_WORKSPACES
     - $SYSTEM_ENV_VARS -> $CONFIGS_DIR/system_env.lua
@@ -2741,15 +2809,16 @@ print_conversion_coverage_summary() {
     - $USER_ANIMATIONS -> $USER_CONFIGS_DIR/user_animations.lua
     - $USER_LAPTOPS -> $USER_CONFIGS_DIR/user_laptops.lua
     - $USER_CONFIGS_DIR/01-UserDefaults.conf -> $USER_CONFIGS_DIR/user_defaults.lua
-[INFO]   Intentionally native/template .conf files:
+    - $USER_CONFIGS_DIR/LaptopDisplay.conf -> $USER_CONFIGS_DIR/user_laptops.lua
+    - $USER_CONFIGS_DIR/WorkSpaceRules.conf -> $USER_CONFIGS_DIR/workspaces.lua
+[INFO]   Preserved native non-Hyprland / standalone .conf files:
     - $DEST_HYPR_DIR/hypridle.conf
     - $DEST_HYPR_DIR/hyprlock.conf, hyprlock-1080p.conf, hyprlock-2k.conf
-    - $DEST_HYPR_DIR/hyprland.conf (fallback/non-Lua entrypoint)
-    - $DEST_HYPR_DIR/Monitor_Profiles/*.conf and $DEST_HYPR_DIR/animations/*.conf (preset profiles)
+    - $DEST_HYPR_DIR/application-style.conf
     - $USER_CONFIGS_DIR/kitty.conf, $USER_CONFIGS_DIR/ghostty.conf, $USER_CONFIGS_DIR/hyprview-layout.conf
-    - $USER_CONFIGS_DIR/LaptopDisplay.conf and $USER_CONFIGS_DIR/WorkSpaceRules.conf (legacy/helper files)
 SUMMARY
 }
+
 if [ -f "$DEST_HYPR_DIR/hypridle.conf" ]; then
   sed -i "s|hyprctl dispatch dpms off|hyprctl dispatch hl.dsp.dpms '{ action = \"off\" }'|g" "$DEST_HYPR_DIR/hypridle.conf"
   sed -i "s|hyprctl dispatch dpms on|hyprctl dispatch hl.dsp.dpms '{ action = \"on\" }'|g" "$DEST_HYPR_DIR/hypridle.conf"
@@ -2757,6 +2826,7 @@ fi
 
 move_converted_user_confs_to_legacy "$USER_CONFIGS_DIR" "$USER_CONFIGS_LEGACY_DIR"
 move_conf_files_to_legacy "$CONFIGS_DIR" "$CONFIGS_LEGACY_DIR" "$CONFIGS_DIR"
+move_root_confs_to_legacy "$DEST_HYPR_DIR" "$DEST_HYPR_DIR/$LEGACY_CONFIGS_DIR_NAME/$MIGRATION_TS"
 print_conversion_coverage_summary
 
 echo "[OK] Lua Hyprland config copied."

@@ -53,7 +53,7 @@ prompt_detect_model() {
   echo ""
 }
 
-# Set keyboard layout in user and system config files (Lua and Hyprlang).
+# Set keyboard layout in the Lua user and system config files.
 set_keyboard_layout_configs() {
   local new_kb="$1"
   local new_var="${2:-}"
@@ -142,62 +142,9 @@ EOF
       sed -i "s/^[[:space:]]*kb_model[[:space:]]*=.*/    kb_model = \"$new_mod\",/" "$file"
     fi
   done
-
-  # 3. Update repo UserConfigs/UserSettings.conf & active target UserSettings.conf
-  local user_conf_files=("$base/config/hypr/UserConfigs/UserSettings.conf")
-  if [ -f "$cfg_home/hypr/UserConfigs/UserSettings.conf" ]; then
-    user_conf_files+=("$cfg_home/hypr/UserConfigs/UserSettings.conf")
-  fi
-  for file in "${user_conf_files[@]}"; do
-    if [ -f "$file" ]; then
-      if grep -q '^[[:space:]]*input[[:space:]]*{' "$file"; then
-        if grep -q '^[[:space:]]*kb_layout[[:space:]]*=' "$file"; then
-          sed -i "s/^[[:space:]]*kb_layout[[:space:]]*=.*/  kb_layout = $new_kb/" "$file"
-        else
-          sed -i "/^[[:space:]]*input[[:space:]]*{/a\\  kb_layout = $new_kb" "$file"
-        fi
-        if grep -q '^[[:space:]]*kb_variant[[:space:]]*=' "$file"; then
-          sed -i "s/^[[:space:]]*kb_variant[[:space:]]*=.*/  kb_variant = $new_var/" "$file"
-        else
-          sed -i "/^[[:space:]]*kb_layout[[:space:]]*=/a\\  kb_variant = $new_var" "$file"
-        fi
-        if grep -q '^[[:space:]]*kb_model[[:space:]]*=' "$file"; then
-          sed -i "s/^[[:space:]]*kb_model[[:space:]]*=.*/  kb_model = $new_mod/" "$file"
-        else
-          sed -i "/^[[:space:]]*kb_variant[[:space:]]*=/a\\  kb_model = $new_mod" "$file"
-        fi
-      else
-        cat >>"$file" <<EOF
-
-input {
-  kb_layout = $new_kb
-  kb_variant = $new_var
-  kb_model = $new_mod
-}
-EOF
-      fi
-      echo "${NOTE} Configured keyboard settings in $file" 2>&1 | tee -a "$log"
-    fi
-  done
-
-  # 4. Update repo configs/SystemSettings.conf & active target SystemSettings.conf
-  local sys_conf_files=("$base/config/hypr/configs/SystemSettings.conf")
-  if [ -f "$cfg_home/hypr/configs/SystemSettings.conf" ]; then
-    sys_conf_files+=("$cfg_home/hypr/configs/SystemSettings.conf")
-  fi
-  for file in "${sys_conf_files[@]}"; do
-    if [ -f "$file" ]; then
-      awk -v new_layout="$new_kb" '/kb_layout/ {$0 = "  kb_layout = " new_layout} 1' "$file" >temp.conf
-      mv temp.conf "$file"
-      awk -v new_variant="$new_var" '/kb_variant/ {$0 = "  kb_variant = " new_variant} 1' "$file" >temp.conf
-      mv temp.conf "$file"
-      awk -v new_model="$new_mod" '/kb_model/ {$0 = "  kb_model = " new_model} 1' "$file" >temp.conf
-      mv temp.conf "$file"
-    fi
-  done
 }
 
-# Confirm or set keyboard layout, variant, and model; writes to user_settings.lua and UserSettings.conf.
+# Confirm or set keyboard layout, variant, and model; writes to UserConfigs/user_settings.lua and lua/settings.lua.
 prompt_keyboard_layout() {
   local layout="${1:-us}"
   local variant="${2:-}"
@@ -289,6 +236,16 @@ prompt_resolution_choice() {
 prompt_clock_12h() {
   local log="$1"
   local base="${DOTFILES_DIR:-.}"
+
+  if [ "${EXPRESS_MODE:-0}" -eq 1 ] || [ "${RUN_MODE:-}" = "express" ]; then
+    echo "${NOTE:-[NOTE]} Express mode: keeping existing clock format (change anytime via Quick Settings -> Toggle Waybar Clock)." 2>&1 | tee -a "$log"
+    return 0
+  fi
+
+  if [ "${RUN_MODE:-}" = "upgrade" ]; then
+    echo "${NOTE:-[NOTE]} Upgrade mode: keeping existing clock format (change anytime via Quick Settings -> Toggle Waybar Clock)." 2>&1 | tee -a "$log"
+    return 0
+  fi
   while true; do
     echo -e "${NOTE} ${SKY_BLUE} By default, KooL's Dots are configured in 24H clock format."
     echo -n "$CAT Do you want to change to 12H (AM/PM) clock format? (y/n): "
@@ -296,15 +253,15 @@ prompt_clock_12h() {
     answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
     if [[ "$answer" == "y" ]]; then
       # waybar clocks
-      sed -i 's#^\(\s*\)//\("format": " {:%I:%M %p}",\) #\1\2 #g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": " {:%H:%M:%S}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "  {:%H:%M}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)//\("format": "{:%I:%M %p - %d/%b}",\) #\1\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "{:%H:%M - %d/%b}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)//\("format": "{:%B | %a %d, %Y | %I:%M %p}",\) #\1\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "{:%B | %a %d, %Y | %H:%M}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)//\("format": "{:%A, %I:%M %P}",\) #\1\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
-      sed -i 's#^\(\s*\)\("format": "{:%a %d | %H:%M}",\) #\1//\2#g' "$base/config/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)//\("format": " {:%I:%M %p}",\) #\1\2 #g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": " {:%H:%M:%S}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": "  {:%H:%M}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)//\("format": "{:%I:%M %p - %d/%b}",\) #\1\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": "{:%H:%M - %d/%b}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)//\("format": "{:%B | %a %d, %Y | %I:%M %p}",\) #\1\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": "{:%B | %a %d, %Y | %H:%M}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)//\("format": "{:%A, %I:%M %P}",\) #\1\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
+      sed -i 's#^\(\s*\)\("format": "{:%a %d | %H:%M}",\) #\1//\2#g' "$base/config/hypr/waybar/Modules" 2>&1 | tee -a "$log"
 
       # hyprlock
       local HYPRLOCK_FILE="$base/config/hypr/hyprlock.conf"

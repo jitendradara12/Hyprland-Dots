@@ -1,5 +1,7 @@
 # Hyprland Default Keybinds
-Source: `config/hypr/lua/keybinds.lua`
+Source: `config/hypr/configs/system_keybinds.lua`
+The `SUPER + SHIFT + K` menu reads the live bind list from `lua/keybind_index.lua`, so it lists what
+is active rather than what this file says.
 
 ## Legend
 - `SUPER` = `$mainMod` (Super / Windows key)
@@ -8,7 +10,7 @@ Source: `config/hypr/lua/keybinds.lua`
 
 ## Duplicate / Intentional Stacked Binds Audit
 - `ALT + Tab`
-  - `cyclenext` (cycles window focus via `LuaCycleWindow.sh next`)
+  - `cyclenext` (cycles window focus via the in-process `cycle_window` action)
 - `SUPER + Tab` / `SUPER + SHIFT + Tab`
   - Group active cycle (`changegroupactive f/b`) and workspace cycle (`workspace e+1/e-1`)
 
@@ -25,7 +27,7 @@ Source: `config/hypr/lua/keybinds.lua`
 - `SUPER + ALT + C` — Calculator (`RofiCalc.sh`)
 - `SUPER + SHIFT + M` — Online music & stations (`RofiBeats.sh`)
 - `SUPER + H` — Help / cheat sheet (`KeyHints.sh`)
-- `SUPER + SHIFT + K` — Search keybinds helper (`KeyBinds.sh`)
+- `SUPER + SHIFT + K` — Search keybinds menu (`KeyBinds.sh`, active binds)
 
 ## Appearance / Theme / Wallpaper / Zoom
 - `SUPER + T` — Global theme switcher using Wallust (`ThemeChanger.sh`)
@@ -33,6 +35,8 @@ Source: `config/hypr/lua/keybinds.lua`
 - `SUPER + CTRL + SHIFT + R` — Modified Rofi theme selector (`RofiThemeSelector-modified.sh`)
 - `SUPER + CTRL + K` — Kitty theme selector (`Kitty_themes.sh`)
 - `SUPER + CTRL + G` — Ghostty theme selector (`Ghostty_themes.sh`)
+- `SUPER + CTRL + W` — Wlogout theme preset selector (`RofiWlogoutTheme.sh`)
+- `SUPER + CTRL + SHIFT + W` — Wlogout background & Wallust theme selector (`RofiWlogoutWallust.sh`)
 - `SUPER + SHIFT + O` — Change Oh-My-Zsh theme (`ZshChangeTheme.sh`)
 - `SUPER + SHIFT + A` — Animations menu (`Animations.sh`)
 - `SUPER + W` — Select wallpaper (`WallpaperSelect.sh`)
@@ -55,6 +59,13 @@ Source: `config/hypr/lua/keybinds.lua`
 - `SUPER + ALT + B` — Waybar layout menu (`WaybarLayout.sh`)
 - `SUPER + ALT + R` — Refresh bar and menus (`Refresh.sh`)
 
+## Monitors / Display Layouts
+Source: `config/hypr/UserConfigs/user_keybinds.lua`, not the system file
+- `SUPER + ALT + D` — Display layout menu for the monitor set in front of you (`DisplayProfileMenu.sh`)
+- `SUPER + ALT + W` — Apply the display layout named `Work` (`DisplayProfile.sh -- Work`)
+  - Create a layout called `Work` first, or this bind reports that there is none
+- `SUPER + SHIFT + E` → **Choose Monitor Profiles** — The same layouts, plus a one-way import of `Monitor_Profiles/` (`MonitorProfiles.sh`)
+
 ## Session / System Controls
 - `SUPER + Q` — Close active window (`killactive`)
 - `SUPER + SHIFT + Q` — Terminate active process (`KillActiveProcess.sh`)
@@ -70,7 +81,7 @@ Source: `config/hypr/lua/keybinds.lua`
 - `SUPER + SHIFT + F` — Fullscreen (`fullscreen 0`)
 - `SUPER + Space` — Toggle floating current window (`togglefloating`)
 - `SUPER + ALT + Space` — Float all windows (`Float-all-Windows.sh`)
-- `SUPER + CTRL + Space` — Float all windows same size (`float.all.samesize.lua`)
+- `SUPER + CTRL + Space` — Float all windows same size (in-process Lua, `lua/window_actions.lua`)
 
 ## Layout Controls
 ### Global layout selection
@@ -102,22 +113,22 @@ Source: `config/hypr/lua/keybinds.lua`
 
 ## Focus / Move / Resize / Swap
 ### Focus
-- `SUPER + j` — Cycle next window (layout-aware via `LayoutKeybindDispatch.sh cycle-next`)
-- `SUPER + k` — Cycle previous window (layout-aware via `LayoutKeybindDispatch.sh cycle-prev`)
-- `SUPER + Left/Right/Up/Down` — Focus window by direction (layout-aware via `LayoutKeybindDispatch.sh focus-*`)
-- `ALT + Tab` — Cycle next window (`LuaCycleWindow.sh next`)
+- `SUPER + j` — Cycle next window (layout-aware, in-process `layout_cycle`)
+- `SUPER + k` — Cycle previous window (layout-aware, in-process `layout_cycle`)
+- `SUPER + Left/Right/Up/Down` — Focus window by direction (layout-aware, in-process `layout_focus`)
+- `ALT + Tab` — Cycle next window (in-process `cycle_window`)
 
 ### Move windows
 - `SUPER + CTRL + Left/Right/Up/Down` — Move window by direction (`movewindow l/r/u/d`)
 
 ### Swap windows
-- `SUPER + ALT + Left/Right/Up/Down` — Swap window by direction (`LuaSwapWindow.sh l/r/u/d`)
+- `SUPER + ALT + Left/Right/Up/Down` — Swap window by direction (`hl.dsp.window.swap`, no-op with no neighbour)
 
 ### Resize windows
-- `SUPER + SHIFT + Left` — Width -50 (`resizeactive -50 0`)
-- `SUPER + SHIFT + Right` — Width +50 (`resizeactive 50 0`)
-- `SUPER + SHIFT + Up` — Height -50 (`resizeactive 0 -50`)
-- `SUPER + SHIFT + Down` — Height +50 (`resizeactive 0 50`)
+- `SUPER + SHIFT + Left` — Width -50 (`hl.dsp.window.resize relative`, repeats while held)
+- `SUPER + SHIFT + Right` — Width +50 (`hl.dsp.window.resize relative`, repeats while held)
+- `SUPER + SHIFT + Up` — Height -50 (`hl.dsp.window.resize relative`, repeats while held)
+- `SUPER + SHIFT + Down` — Height +50 (`hl.dsp.window.resize relative`, repeats while held)
 
 ### Mouse drag controls
 - `SUPER + mouse:272` (Left click drag) — Move window (`movewindow`)
@@ -179,7 +190,7 @@ Source: `config/hypr/lua/keybinds.lua`
 - `XF86AudioMicMute` — Toggle microphone mute (`Volume.sh --toggle-mic`)
 
 ### Playback controls
-- `XF86AudioPlayPause` / `XF86AudioPause` / `XF86AudioPlay` — Play / pause (`MediaCtrl.sh --pause`)
+- `XF86AudioPlay` / `XF86AudioPause` — Play / pause (`MediaCtrl.sh --pause`)
 - `XF86AudioNext` — Next track (`MediaCtrl.sh --nxt`)
 - `XF86AudioPrev` — Previous track (`MediaCtrl.sh --prv`)
 - `XF86AudioStop` — Stop playback (`MediaCtrl.sh --stop`)
@@ -189,5 +200,5 @@ Source: `config/hypr/lua/keybinds.lua`
 - `XF86Rfkill` — Airplane mode toggle (`AirplaneMode.sh`)
 
 ## Keyboard Layout Switching
-- `Left ALT + Left SHIFT` (`ALT_L + SHIFT_L`) — Switch keyboard layout globally (`KeyboardLayout.sh switch`)
-- `Left SHIFT + Left ALT` (`SHIFT_L + ALT_L`) — Switch keyboard layout per-window (`Tak0-Per-Window-Switch.sh`)
+- `ALT + SHIFT` (`ALT + Shift_L / Shift_R`) — Switch keyboard layout globally (`KeyboardLayout.sh switch`)
+- `SHIFT + ALT` (`SHIFT + Alt_L / Alt_R`) — Switch keyboard layout per-window (`Tak0-Per-Window-Switch.sh`)

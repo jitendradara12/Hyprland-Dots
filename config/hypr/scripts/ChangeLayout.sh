@@ -13,6 +13,12 @@ persist_layout_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/PersistWor
 layouts=(master dwindle scrolling monocle)
 quiet_mode=0
 
+# hypr_emit_event tells the event-driven Waybar layout module that a change
+# happened. It has no interval poll, so without this the label would only
+# refresh on the next socket event.
+# shellcheck source=HyprIPC.sh
+. "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/HyprIPC.sh"
+
 normalize_layout() {
   case "$1" in
   master | dwindle | scrolling | monocle)
@@ -153,13 +159,10 @@ set_workspace_layout_rule() {
     return 1
   fi
 
-  output="$(hyprctl keyword workspace "${workspace_selector}, monitor:${monitor_name}, layout:${target}" 2>&1 || true)"
-  if grep -q "keyword can't work with non-legacy parsers" <<<"$output"; then
-    ws_escaped="$(escape_lua_string "$workspace_selector")"
-    monitor_escaped="$(escape_lua_string "$monitor_name")"
-    target_escaped="$(escape_lua_string "$target")"
-    output="$(hyprctl eval "hl.workspace_rule({ workspace = \"${ws_escaped}\", monitor = \"${monitor_escaped}\", layout = \"${target_escaped}\" })" 2>&1 || true)"
-  fi
+  ws_escaped="$(escape_lua_string "$workspace_selector")"
+  monitor_escaped="$(escape_lua_string "$monitor_name")"
+  target_escaped="$(escape_lua_string "$target")"
+  output="$(hyprctl eval "hl.workspace_rule({ workspace = \"${ws_escaped}\", monitor = \"${monitor_escaped}\", layout = \"${target_escaped}\" })" 2>&1 || true)"
 
   if ! is_ok_output "$output"; then
     echo "$output" >&2
@@ -197,6 +200,7 @@ set_layout() {
   actual="$(wait_for_layout "$target")"
   if [[ "$actual" == "$target" ]]; then
     persist_current_workspace_layout "$target"
+    hypr_emit_event "kool:layout"
     if [[ "$quiet_mode" -eq 0 ]]; then
       notify-send -e -u low -i "$notif" " ${actual^} Layout · WS ${workspace_label}${monitor_name:+ @ ${monitor_name}}"
     fi

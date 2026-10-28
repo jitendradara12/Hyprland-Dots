@@ -16,6 +16,9 @@ rofi_theme_fallback="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-edit.ras
 wallust_include_path="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/wallust.conf"
 wallust_option_label="Set by wallpaper"
 default_option_label="Default - no color"
+# Same indicator the other selection menus use. Stripped again before a row is
+# read as a theme name.
+MARKER="👉"
 wallust_refresh_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh"
 
 notify_user() {
@@ -104,9 +107,42 @@ mapfile -t available_theme_names < <(
   }' "$config_file"
 )
 
+original_theme_count=${#available_theme_names[@]}
+
+# Only offer themes Ghostty can actually resolve. Distros that ship Ghostty
+# without the bundled theme collection (Gentoo/minimal builds) would otherwise
+# let a user pick a theme that fails with a configuration error at launch.
+ghostty_themes_dir="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/themes"
+ghostty_theme_list=""
+if command -v ghostty >/dev/null 2>&1; then
+  ghostty_theme_list="$(ghostty +list-themes 2>/dev/null | sed -E 's/[[:space:]]+\((user|builtin)\)[[:space:]]*$//')"
+fi
+theme_is_available() {
+  local name="$1"
+  [[ -n "$name" ]] || return 1
+  [[ -f "$ghostty_themes_dir/$name" ]] && return 0
+  if [[ -n "${GHOSTTY_RESOURCES_DIR:-}" && -f "$GHOSTTY_RESOURCES_DIR/themes/$name" ]]; then
+    return 0
+  fi
+  if [[ -n "$ghostty_theme_list" ]] && printf '%s\n' "$ghostty_theme_list" | grep -Fxq -- "$name"; then
+    return 0
+  fi
+  return 1
+}
+filtered_theme_names=()
+for _theme in "${available_theme_names[@]}"; do
+  if theme_is_available "$_theme"; then
+    filtered_theme_names+=("$_theme")
+  fi
+done
+available_theme_names=("${filtered_theme_names[@]}")
+
 if [[ ${#available_theme_names[@]} -eq 0 ]]; then
-  notify_user "$iDIR/error.png" "Ghostty Theme" "No commented themes found in $config_file"
-  exit 1
+  if [[ $original_theme_count -eq 0 ]]; then
+    notify_user "$iDIR/error.png" "Ghostty Theme" "No commented themes found in $config_file"
+    exit 1
+  fi
+  notify_user "$iDIR/error.png" "Ghostty Theme" "None of the listed themes are installed on this system; use 'Set by wallpaper' instead"
 fi
 menu_entries=("$wallust_option_label" "$default_option_label")
 for t in "${available_theme_names[@]}"; do
@@ -127,15 +163,27 @@ else
   done
 fi
 
+# What the message line names as current, mirroring the row chosen above.
+current_label="$current_theme"
+if [[ "$wallust_enabled" == "1" ]]; then
+  current_label="$wallust_option_label"
+elif [[ -z "$current_theme" ]]; then
+  current_label="$default_option_label"
+fi
+
+# Mark the entry in effect. The marker is removed again before the choice is
+# compared against the labels.
+menu_entries[$current_selection_index]="$MARKER ${menu_entries[$current_selection_index]}"
+
 "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
 choice=$(
   printf "%s\n" "${menu_entries[@]}" |
-    rofi -i -dmenu -p "Ghostty Theme" "${rofi_config_args[@]}" -mesg "Select a theme to apply" -selected-row "$current_selection_index"
+    rofi -i -dmenu -p "Ghostty Theme" "${rofi_config_args[@]}" -mesg "Current: $current_label · Select a theme to apply" -selected-row "$current_selection_index"
 )
 
 [[ -z "$choice" ]] && exit 0
 
-
+choice="${choice#"$MARKER "}"
 selected_theme="$choice"
 
 if [[ "$selected_theme" == "$wallust_option_label" ]]; then

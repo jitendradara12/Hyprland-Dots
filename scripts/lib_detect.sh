@@ -18,27 +18,32 @@ detect_nvidia_adjust() {
   if echo "$pci_info" | grep -iq nvidia; then
     has_nvidia=1
   fi
-  if echo "$pci_info" | grep -iq intel; then
+  # Word boundaries matter here: lspci calls VGA devices "VGA compatible
+  # controller", and a bare `ati` alternative matches the "ati" inside
+  # "compatible", which made has_amd=1 on every machine with a VGA device. It no
+  # longer changes the value written below - every NVIDIA path writes 1 - but it
+  # still picks the wrong log line, so the bounds stay.
+  if echo "$pci_info" | grep -Eiq '\bintel\b'; then
     has_intel=1
   fi
-  if echo "$pci_info" | grep -Eiq 'amd|advanced micro devices|ati'; then
+  if echo "$pci_info" | grep -Eiq '\b(amd|ati)\b|advanced micro devices'; then
     has_amd=1
   fi
   if [ "$has_nvidia" -eq 1 ]; then
     echo "${INFO:-[INFO]} Nvidia GPU detected. Setting up proper env's and configs" 2>&1 | tee -a "$log" || true
-    sed -i '/env = LIBVA_DRIVER_NAME,nvidia/s/^#//' config/hypr/configs/ENVariables.conf
-    sed -i '/env = __GLX_VENDOR_LIBRARY_NAME,nvidia/s/^#//' config/hypr/configs/ENVariables.conf
-    sed -i '/env = NVD_BACKEND,direct/s/^#//' config/hypr/configs/ENVariables.conf
-    sed -i '/env = GSK_RENDERER,ngl/s/^#//' config/hypr/configs/ENVariables.conf
+    if [ -f config/hypr/lua/env.lua ]; then
+      sed -i 's/^--[[:space:]]*hl\.env("LIBVA_DRIVER_NAME"/hl.env("LIBVA_DRIVER_NAME"/' config/hypr/lua/env.lua
+      sed -i 's/^--[[:space:]]*hl\.env("__GLX_VENDOR_LIBRARY_NAME"/hl.env("__GLX_VENDOR_LIBRARY_NAME"/' config/hypr/lua/env.lua
+      sed -i 's/^--[[:space:]]*hl\.env("NVD_BACKEND"/hl.env("NVD_BACKEND"/' config/hypr/lua/env.lua
+      sed -i 's/^--[[:space:]]*hl\.env("GSK_RENDERER"/hl.env("GSK_RENDERER"/' config/hypr/lua/env.lua
+    fi
     if [ "$has_intel" -eq 1 ] || [ "$has_amd" -eq 1 ]; then
       echo "${INFO:-[INFO]} Hybrid GPU detected (Intel/NVIDIA or AMD/NVIDIA). Applying cursor handoff fixes." 2>&1 | tee -a "$log" || true
-      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/configs/SystemSettings.conf
-      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 0/' config/hypr/lua/settings.lua
-      sed -i '/hyprctl setcursor/s/^#//' config/hypr/configs/Startup_Apps.conf
-    else
-      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/configs/SystemSettings.conf
-      sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua
     fi
+    # 1 = don't use hardware cursors. NVIDIA needs software cursors, hybrids
+    # included: the cursor plane has to be handed between the iGPU and the dGPU,
+    # and that handoff is what users see as a stuck or corrupt cursor.
+    [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua
   fi
 }
 
@@ -47,23 +52,20 @@ detect_vm_adjust() {
   local log="$1"
   if hostnamectl | grep -q 'Chassis: vm'; then
     echo "${INFO:-[INFO]} System is running in a virtual machine. Setting up proper env's and configs" 2>&1 | tee -a "$log" || true
-    sed -i 's/^\([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*\)2/\1 1/' config/hypr/configs/SystemSettings.conf
-    sed -i '/env = WLR_RENDERER_ALLOW_SOFTWARE,1/s/^#//' config/hypr/configs/ENVariables.conf
-    sed -i '/monitor = Virtual-1, 1920x1080@60,auto,1/s/^#//' config/hypr/monitors.conf
+    [ -f config/hypr/lua/env.lua ] && sed -i 's/^--[[:space:]]*hl\.env("WLR_RENDERER_ALLOW_SOFTWARE"/hl.env("WLR_RENDERER_ALLOW_SOFTWARE"/' config/hypr/lua/env.lua
+    # Software cursors, like the NVIDIA path: virtual GPUs (virtio, VMware,
+    # VirtualBox) mis-render hardware cursors, so enable no_hardware_cursors.
+    # Runs after detect_nvidia_adjust, so a passed-through NVIDIA GPU in a VM
+    # ends up enabled here too.
+    [ -f config/hypr/lua/settings.lua ] && sed -i -E 's/^([[:space:]]*no_hardware_cursors[[:space:]]*=[[:space:]]*)[0-9]+/\1 1/' config/hypr/lua/settings.lua
   fi
 }
 
-# NixOS tweaks: ensure polkit overlay is enabled and default disabled.
+# NixOS tweaks: log detection; polkit handling is delegated inside Polkit.sh
 detect_nixos_adjust() {
   local log="$1"
   if hostnamectl | grep -q 'Operating System: NixOS'; then
-    echo "${INFO:-[INFO]} NixOS Distro Detected. Setting up proper env's and configs." 2>&1 | tee -a "$log" || true
-    local OVERLAY_SA="config/hypr/configs/Startup_Apps.conf"
-    local DISABLE_SA="config/hypr/configs/Startup_Apps.disable"
-    mkdir -p "$(dirname "$OVERLAY_SA")"
-    touch "$OVERLAY_SA" "$DISABLE_SA"
-    grep -qx 'exec-once = $scriptsDir/Polkit-NixOS.sh' "$OVERLAY_SA" || echo 'exec-once = $scriptsDir/Polkit-NixOS.sh' >>"$OVERLAY_SA"
-    grep -qx '\$scriptsDir/Polkit.sh' "$DISABLE_SA" || echo '$scriptsDir/Polkit.sh' >>"$DISABLE_SA"
+    echo "${INFO:-[INFO]} NixOS Distro Detected." 2>&1 | tee -a "$log" || true
   fi
 }
 # Qt Quick Controls style safety: enable Hyprland style only when module exists.
@@ -74,25 +76,18 @@ adjust_qt_quick_controls_style() {
   local style="Basic"
   local qt_style_override="Fusion"
   local has_kvantum_qml=0
-  local set_env_conf_vars
   local set_env_lua_vars
+  local _restore_nullglob=0
 
-  set_env_conf_vars() {
-    local file="$1"
-    [ -f "$file" ] || return 0
-
-    if grep -q '^env = QT_QUICK_CONTROLS_STYLE,' "$file"; then
-      sed -i -E "s|^env = QT_QUICK_CONTROLS_STYLE,.*$|env = QT_QUICK_CONTROLS_STYLE,${style}|" "$file"
-    else
-      printf '\nenv = QT_QUICK_CONTROLS_STYLE,%s\n' "$style" >>"$file"
-    fi
-
-    if grep -q '^env = QT_STYLE_OVERRIDE,' "$file"; then
-      sed -i -E "s|^env = QT_STYLE_OVERRIDE,.*$|env = QT_STYLE_OVERRIDE,${qt_style_override}|" "$file"
-    else
-      printf 'env = QT_STYLE_OVERRIDE,%s\n' "$qt_style_override" >>"$file"
-    fi
-  }
+  # The Qt QML probe patterns below are all optional paths, so an unmatched
+  # glob must expand to nothing instead of aborting the script. zsh aborts by
+  # default (`nomatch`); bash can be configured to as well (`failglob`).
+  if [ -n "${ZSH_VERSION:-}" ]; then
+    setopt local_options null_glob 2>/dev/null || true
+  elif [ -n "${BASH_VERSION:-}" ] && ! shopt -q nullglob 2>/dev/null; then
+    shopt -s nullglob 2>/dev/null || true
+    _restore_nullglob=1
+  fi
 
   set_env_lua_vars() {
     local file="$1"
@@ -111,22 +106,42 @@ adjust_qt_quick_controls_style() {
     fi
   }
 
-  if find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/org/hyprland/style' -print -quit 2>/dev/null | grep -q .; then
+  local has_hyprland_style=0
+  for d in \
+    /usr/lib*/qt*/qml \
+    /usr/lib*/*-linux-gnu/qt*/qml \
+    /usr/lib*/qml \
+    /usr/share/qt*/qml \
+    /usr/share/qml; do
+    [ -d "$d" ] || continue
+    if [ -d "$d/org/hyprland/style" ]; then
+      has_hyprland_style=1
+      break
+    fi
+  done
+  if [ "$has_hyprland_style" -eq 1 ]; then
     style="org.hyprland.style"
   elif command -v dpkg >/dev/null 2>&1 && dpkg -s qml6-module-org-hyprland-style >/dev/null 2>&1; then
     style="org.hyprland.style"
   fi
 
-  if find /usr/lib /usr/lib64 /usr/share -type d -path '*/qml/*/kvantum' -print -quit 2>/dev/null | grep -q .; then
-    has_kvantum_qml=1
-    qt_style_override="kvantum"
-  fi
+  for d in \
+    /usr/lib*/qt*/qml \
+    /usr/lib*/*-linux-gnu/qt*/qml \
+    /usr/lib*/qml \
+    /usr/share/qt*/qml \
+    /usr/share/qml; do
+    [ -d "$d" ] || continue
+    if [ -d "$d/kvantum" ] || [ -d "$d/org/kde/kvantum" ]; then
+      has_kvantum_qml=1
+      qt_style_override="kvantum"
+      break
+    fi
+  done
 
-  set_env_conf_vars "$source_hypr_dir/configs/ENVariables.conf"
   set_env_lua_vars "$source_hypr_dir/lua/env.lua"
   set_env_lua_vars "$source_hypr_dir/configs/system_env.lua"
 
-  set_env_conf_vars "$target_hypr_dir/configs/ENVariables.conf"
   set_env_lua_vars "$target_hypr_dir/lua/env.lua"
   set_env_lua_vars "$target_hypr_dir/configs/system_env.lua"
 
@@ -139,6 +154,10 @@ adjust_qt_quick_controls_style() {
     echo "${INFO:-[INFO]} Kvantum QML module detected. Using QT_STYLE_OVERRIDE=kvantum" 2>&1 | tee -a "$log" || true
   else
     echo "${WARN:-[WARN]} Kvantum QML module not found. Using QT_STYLE_OVERRIDE=Fusion as fallback." 2>&1 | tee -a "$log" || true
+  fi
+
+  if [ "$_restore_nullglob" -eq 1 ]; then
+    shopt -u nullglob 2>/dev/null || true
   fi
 }
 

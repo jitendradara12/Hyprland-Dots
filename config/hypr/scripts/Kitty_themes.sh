@@ -8,38 +8,25 @@
 # Kitty Themes Source https://github.com/dexpota/kitty-themes #
 
 # Define directories and variables
-kitty_themes_DiR="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty-themes" # Kitty Themes Directory
+kitty_themes_DiR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty-themes" # Kitty Themes Directory
 user_kitty_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty.conf"
-fallback_kitty_config="${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty.conf"
 kitty_config="$user_kitty_config"
 iDIR="${XDG_CONFIG_HOME:-$HOME/.config}/swaync/images" # For notifications
 rofi_theme_for_this_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/rofi/config-kitty-theme.rasi"
 wallust_refresh_script="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/WallustSwww.sh"
 debug_log="${XDG_CACHE_HOME:-$HOME/.cache}/kooldots-kitty-themes.log"
+# Same indicator the other selection menus use. Never part of a theme name.
+MARKER="👉"
 
 ensure_managed_kitty_config() {
   if [ -f "$user_kitty_config" ] && [ -r "$user_kitty_config" ]; then
     kitty_config="$user_kitty_config"
     return 0
   fi
-
-  if [ -r "$fallback_kitty_config" ]; then
-    mkdir -p "$(dirname "$user_kitty_config")" 2>/dev/null || true
-    cp -f "$fallback_kitty_config" "$user_kitty_config" 2>/dev/null || true
-    if [ -f "$user_kitty_config" ] && [ -r "$user_kitty_config" ]; then
-      kitty_config="$user_kitty_config"
-      return 0
-    fi
-  fi
-
-  kitty_config="$fallback_kitty_config"
 }
 
 sync_runtime_kitty_config() {
-  if [ "$kitty_config" != "$fallback_kitty_config" ] && [ -r "$kitty_config" ]; then
-    mkdir -p "$(dirname "$fallback_kitty_config")" 2>/dev/null || true
-    cp -f "$kitty_config" "$fallback_kitty_config" 2>/dev/null || true
-  fi
+  :
 }
 
 # --- Helper Functions ---
@@ -58,6 +45,9 @@ resolve_theme_selection() {
 
   rofi_output="${rofi_output//$'\r'/}"
   rofi_output="${rofi_output//$'\n'/}"
+  # The menu is asked for an index, but a marker that reaches a name lookup
+  # would silently match nothing.
+  rofi_output="${rofi_output#"$MARKER "}"
 
   if [[ "$rofi_output" =~ ^[0-9]+$ ]] && [ "$rofi_output" -lt "${#available_theme_names[@]}" ]; then
     current_selection_index="$rofi_output"
@@ -105,7 +95,7 @@ apply_kitty_theme_to_config() {
   cp "$kitty_config" "$temp_kitty_config_file"
 
   local include_target
-  include_target="include ${XDG_CONFIG_HOME:-$HOME/.config}/kitty/kitty-themes/$(basename "$theme_file_path_to_apply")"
+  include_target="include ${XDG_CONFIG_HOME:-$HOME/.config}/hypr/UserConfigs/kitty-themes/$(basename "$theme_file_path_to_apply")"
 
   sed -i -E '/^[[:space:]]*include[[:space:]]+.*kitty-themes\/.*\.conf[[:space:]]*$/d' "$temp_kitty_config_file"
   if [ -s "$temp_kitty_config_file" ] && [ "$(tail -c1 "$temp_kitty_config_file")" != "" ]; then
@@ -202,19 +192,26 @@ theme_to_preview_now="${available_theme_names[$current_selection_index]}"
 
 while true; do
 
+  # One row per theme, with the marker on the theme that is live. A preview
+  # writes the config straight away, so the marked row is the theme in effect
+  # right now and it moves with the preview.
   rofi_input_list=""
-  for theme_name_in_list in "${available_theme_names[@]}"; do
-    rofi_input_list+="$theme_name_in_list\n"
+  for i in "${!available_theme_names[@]}"; do
+    if [[ "$i" -eq "$current_selection_index" ]]; then
+      rofi_input_list+="$MARKER ${available_theme_names[$i]}"$'\n'
+    else
+      rofi_input_list+="${available_theme_names[$i]}"$'\n'
+    fi
   done
-  rofi_input_list_trimmed="${rofi_input_list%\\n}"
+  rofi_input_list_trimmed="${rofi_input_list%$'\n'}"
 
   "${XDG_CONFIG_HOME:-$HOME/.config}/hypr/scripts/RofiFocusedWallpaperLink.sh" >/dev/null 2>&1 || true
-  chosen_selection_from_rofi=$(echo -e "$rofi_input_list_trimmed" |
+  chosen_selection_from_rofi=$(printf '%s\n' "$rofi_input_list_trimmed" |
     rofi -dmenu -i \
       -no-custom \
       -format 'i' \
       -p "Kitty Theme" \
-      -mesg "Enter: Preview | Ctrl+S (or Alt+1): Apply & Exit | Esc: Cancel" \
+      -mesg "Current: ${available_theme_names[$current_selection_index]} | Enter: Preview | Ctrl+S (or Alt+1): Apply & Exit | Esc: Cancel" \
       -config "$rofi_theme_for_this_script" \
       -selected-row "$current_selection_index" \
       -kb-custom-1 "Control+s,Control+S,Alt+1")

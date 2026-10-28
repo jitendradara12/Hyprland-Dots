@@ -13,11 +13,14 @@
 -- hl.workspace_rule({
 --     workspace = "1",
 --     monitor = "eDP-1",
---     layout = "master",
+--     layout = "dwindle",
 -- })
+
+-- Personal rules below. Kept as a block at the end of the file so upstream
+-- edits to the template above merge cleanly instead of conflicting.
 hl.workspace_rule({ workspace = "3", monitor = "eDP-1", layout = "dwindle" })
-hl.workspace_rule({ workspace = "9", monitor = "eDP-1", layout = "dwindle" })
-hl.workspace_rule({ workspace = "10", monitor = "eDP-1", layout = "dwindle" })
 hl.workspace_rule({ workspace = "4", monitor = "eDP-1", layout = "monocle" })
 hl.workspace_rule({ workspace = "5", monitor = "eDP-1", layout = "dwindle" })
+hl.workspace_rule({ workspace = "9", monitor = "eDP-1", layout = "dwindle" })
+hl.workspace_rule({ workspace = "10", monitor = "eDP-1", layout = "dwindle" })
 hl.workspace_rule({ workspace = "12", monitor = "eDP-1", layout = "dwindle" })

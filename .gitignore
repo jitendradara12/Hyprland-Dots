@@ -175,3 +175,42 @@ config/hypr/rofi/.current_wallpaper*
 config/opencode/skills/impeccable/
 config/opencode/commands/impeccable.md
 config/opencode/vendor/
+#
+# NFS Mount lock files 
+.nfs*
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+.cache/
+.tox/
+htmlcov/
+
+# Type checking and linting
+.mypy_cache/
+.pytype/
+.flake8
+.ruff_cache/
+
+# IDE and editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Copy-Logs
+Copy-Logs/
+
+# Stray merge artifacts
+*~jakoolit_main
+*_BACKUP_[0-9]*
+*_LOCAL_[0-9]*
+*_REMOTE_[0-9]*
+*_BASE_[0-9]*
