@@ -1,5 +1,158 @@
 # Changelog — KoolDots
 
+## v2.3.29
+
+## Fixed:
+
+- Clients that need an alpha buffer can start again, e.g. `kitty` on a VM
+  - `quirks:skip_non_kms_dmabuf_formats` defaults to `true`
+  - It narrows advertised renderer dmabuf formats to the display's scanout set
+  - On `virtio-gpu` that left only `XRGB8888`, so no alpha `EGLConfig` existed
+  - `kitty` failed with `EGL: No EGLConfigs returned`
+  - GLFW asks for `EGL_ALPHA_SIZE 8`, which no offered config had
+  - `lua/settings.lua` now sets `skip_non_kms_dmabuf_formats = false`
+  - Existing installs get it from the refreshed system config, no patch needed
+- The dots upgrade no longer stops at the first clone
+  - `kdu_clone_args` listed the clone options but not the `clone` subcommand
+  - `KooLsDotsUpgrade.sh` ran `git --depth=1 <url> <dest>`, which git rejected
+  - It aborted with `Could not clone Debian-Hyprland.` before downloading
+  - The argument list now starts with `clone`, so the plan matches the run
+- Gentoo is detected again, so the dots upgrade runs there
+  - `/etc/os-release` quotes its values with single quotes on Gentoo
+  - `kdu_os_release_value` stripped only double quotes
+  - `ID` read as `'gentoo'`, so detection fell through to `unknown`
+  - The upgrade then refused with `Automatic upgrade is not available`
+  - Either quote style is stripped, and Gentoo takes the dotfiles-only path
+- Rainbow Borders applies the border again on Hyprland 0.57
+  - 0.57 removed the legacy `keyword` socket command
+  - `hyprctl keyword` still exits 0, answering `unknown request`
+  - Both scripts read that as a successful write, so nothing was applied
+  - `RainbowBorders-low-cpu.sh` now writes every tick with `hyprctl eval`
+  - `RainbowBorders.bak.sh` does the same for the one-shot write
+  - `hl.config()` runs in Hyprland's Lua state, which answers exactly `ok`
+  - A rejected command is no longer mistaken for a write that worked
+  - `keyword` stays as a fallback for builds with no `eval` command
+  - The animated loop exits on `SIGTERM`/`INT` after restoring
+  - Without the exit it resumed and overwrote the restored border
+  - It also survived `SIGTERM`, leaving a loop that kept rewriting
+  - Restore reads the 0.57 `gradient data:` line and adds the `0x` prefix
+  - That line prints bare hex, which the colour parser rejected
+- The config is no longer reloaded every ~2 seconds
+  - `DisplayProfile.sh` rewrites `UserConfigs/monitors.lua` on every apply
+  - The `configreloaded` that follows made `MonitorWatcher.sh` re-apply
+  - It re-applied the named layout, rewriting the same bytes with a new mtime
+  - `LuaConfigWatch.sh` reloaded for that mtime, so the two looped
+  - It now hashes every watched file and skips a write that changed nothing
+  - A real save, a new file and a deletion still reload
+  - The baseline is seeded at startup, so restoring it is ignored too
+  - The polling fallback applies the same check
+  - Measured: 3 `configreloaded` per 6s before, 0 after
+- `Wallust Color` and `Gradient Flow` use the wallpaper palette again
+  - `RainbowBorders.bak.sh` read the palette with an awk parser
+  - It accepted `0x…`, `#RRGGBB` and `rgb(r,g,b)`
+  - Wallust writes `rgb(RRGGBB)`, six hex digits and no commas
+  - Nothing matched, so `WALLUST_COLORS` came out empty
+  - The script then silently fell back to the plain rainbow palette
+  - So both modes rendered the same border as `Original Rainbow`
+  - The parser now also reads `rgb(RRGGBB)` and `rgba(RRGGBBAA)`
+  - That is the form `lua/user_decorations_helper.lua` already parsed
+- `Original Rainbow`, `Wallust Color` and `Gradient Flow` read as a gradient
+  - `RainbowBorders.bak.sh` wrote the gradient at a fixed `270deg`
+  - A one-shot gradient at an axis-aligned angle is flat on two edges
+  - At `270deg` the long top and bottom edges were one colour each
+  - A 1px `border_size` made that read as a solid hairline border
+  - The angle is now a `45deg` diagonal, so all four edges carry colour
+  - `RB_ANGLE` overrides it; `0` and `90` are the flat-edge cases
+
+## Added:
+
+- Waybar's dots update check can now download and run the upgrade
+  - Right-click `custom/dot_update`, or pick `Upgrade now` in its window
+  - It clones the installer for your OS and `Hyprland-Dots` into a temp dir
+  - Both land in a random `kooldots-upgrade-*` directory under `$HOME`
+  - It runs the installer's `install-scripts/update-deps.sh` first
+  - Then `copy.sh --tty --express-upgrade` for the dots
+  - A terminal opens for both, since they use `sudo` and ask questions
+  - It asks before removing the temp dir, and keeps it when a step fails
+  - It reminds you to update the OS first, and links the Debian Hyprland guide
+  - Linux Mint and Zorin OS are supported as Ubuntu 24.04 based
+  - Ubuntu 26.10 is not supported and uses the 26.04 branch, with a warning
+  - On NixOS and Gentoo only the dots are updated, after a `[Y/n]` prompt
+    - Neither has an installer to clone or an `update-deps.sh` to run
+    - The window offers `Upgrade Dots only` and links `Packages Required`
+    - Install the packages the dots need yourself before upgrading
+  - An unrecognised distro still gets the check-only message
+  - `KooLsDotsUpgrade.sh --dry-run` prints the plan and changes nothing
+- `WaybarStartup.sh` records why it started, or why it did not
+  - Every early exit was silent, so a missing bar had no explanation
+  - A lock timeout, an already-running bar and a failed launch looked alike
+  - It now logs the environment, the resolved config and the branch taken
+  - `WAYBAR_STARTUP_LOG` defaults to `$XDG_RUNTIME_DIR/waybar-startup.log`
+  - It logs whether a bar actually appeared, not just that one was launched
+  - Waybar's own stderr now goes to `$XDG_RUNTIME_DIR/waybar.log`
+  - It was sent to `/dev/null`, so a config or CSS error left no trace
+  - `WAYBAR_LOG` still overrides that destination
+- Window wobble can be toggled from `SUPER SHIFT X` or quick settings
+  - Hyprland 0.57 added `decoration:wobble`, and it ships disabled
+  - `scripts/ToggleWobble.sh` flips it and reloads
+  - The toggle is persistent: it rewrites `UserConfigs/user_decorations.lua`
+  - The wobble table there also holds the physics, so one place to tune
+  - `ToggleWobble.sh` refuses to write below Hyprland 0.57
+  - Older compositors get a notification naming the version required
+  - `Kool_Quick_Settings.sh` lists it under `[[ Toggle Options ]]`
+  - `system_keybinds.lua` binds `SUPER SHIFT X`
+  - `ToggleWobble.sh --status` prints `On`/`Off`/`Unsupported`
+
+## Updated:
+
+- `SUPER SHIFT B` opens the Rainbow Borders mode menu
+  - It ran `RainbowBorders-low-cpu.sh --run-once`, one fixed gradient
+  - The menu was two levels into Quick Settings, so it was rarely reached
+  - `Kool_Quick_Settings.sh --rainbow-borders` opens that submenu directly
+  - Disable, Wallust Color, Original Rainbow, Gradient Flow, Low CPU Rainbow
+  - It calls the same menu function, so the mode marker is shared
+  - Both entry points show the same current mode and apply the same way
+- `Wallust Color` and `Gradient Flow` animate, like `Low CPU Rainbow`
+  - `RainbowBorders.bak.sh` wrote one frame and exited
+  - `gradient_flow` advanced its glow only at the end of a run
+  - Every run was a fresh process, so the glow stayed at stop 0
+  - Half the border was the one base colour, which read as solid
+  - `Wallust Color` picked each of its ten stops independently at random
+  - The scrambled order averaged out to a mid-tone on a thin border
+  - The script is a loop now; `--once` still writes a single frame
+  - `Wallust Color` slides a ten-colour window along the palette
+  - `Gradient Flow` moves the glow one stop per frame
+  - `Original Rainbow` rotates the gradient angle
+  - Both loops hold a PID lock, so each start stops the other
+  - `RainbowBordersStartup.sh` and Quick Settings stop it on a mode change
+- `hl.meta.lua` refreshed to the stub Hyprland 0.57.0 ships
+  - It is generated upstream by `meta/generateLuaStubs.py`
+  - The installed copy is `/usr/share/hypr/stubs/hl.meta.lua`
+  - The vendored copy was 1252 lines; the shipped stub is 2015
+  - Editors flagged `decoration.wobble.*`, which the dots already set
+  - New `HL.ConfigOpt` tree types `hl.config({ ... })` as well
+  - Refresh with `cp` from that path, then add the trailing newline
+
+## Removed:
+
+- Hard coded keybard `pc105` from `config/hypr/lua/settings.lua`
+- Deprecated `dwindle.special_scale_factor` setting
+  - `hyprctl deprecated-config` flags it on Hyprland 0.57
+  - The special workspace is inset with a workspace rule instead
+  - The rule is a system default in `lua/workspaces.lua`, so updates carry it
+  - Override it with a rule in `UserConfigs/workspaces.lua`
+  - `gaps_out` is absolute pixels, unlike the old `0.8` factor
+  - Raise `gaps_out` on a display larger than 1080p
+  - `special:scratchpad` needs no rule: the dropdown terminal is floating
+- The gaps and border example in `user_settings.lua`
+  - It showed `gaps_in`, `gaps_out` and `border_size` under `general`
+  - `user_decorations.lua` loads later and sets all three
+  - So the example never applied, and read as the place to edit them
+  - The comment now points at `UserConfigs/user_decorations.lua`
+
+---- 
+
+
 ## v2.3.28
 
 ## Fixed:

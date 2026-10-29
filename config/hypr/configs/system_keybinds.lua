@@ -482,6 +482,10 @@ bind(
 )
 bind("SUPER ALT", "O", exec_cmd("$HOME/.config/hypr/scripts/ChangeBlur.sh"), { description = "toggle blur" })
 bind("SUPER SHIFT", "G", exec_cmd("$HOME/.config/hypr/scripts/GameMode.sh"), { description = "toggle game mode" })
+-- Window wobble (Hyprland 0.57+). SUPER SHIFT W was already taken by the
+-- wallpaper effects script, and every other W combo (SUPER, SUPER CTRL,
+-- SUPER ALT, CTRL ALT, SUPER CTRL SHIFT) is in use too, so this sits on X.
+bind("SUPER SHIFT", "X", exec_cmd("$HOME/.config/hypr/scripts/ToggleWobble.sh"), { description = "toggle window wobble" })
 bind(
   "SUPER ALT",
   "L",
@@ -528,8 +532,8 @@ bind(
 bind(
   "SUPER SHIFT",
   "B",
-  exec_cmd("$HOME/.config/hypr/UserScripts/RainbowBorders-low-cpu.sh  --run-once"),
-  { description = "Set static Rainbow Border" }
+  exec_cmd("$HOME/.config/hypr/scripts/Kool_Quick_Settings.sh --rainbow-borders"),
+  { description = "Rainbow Borders mode menu" }
 )
 bind(
   "SUPER SHIFT",
