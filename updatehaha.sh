@@ -16,12 +16,26 @@ if ! git remote | grep -q '^jakoolit$'; then
   git remote add jakoolit https://github.com/LinuxBeginnings/Hyprland-Dots
 fi
 
-echo "Fetching latest changes (depth 20) from jakoolit..."
-git fetch --depth 20 jakoolit
+echo "Fetching latest changes from jakoolit..."
+git fetch --prune jakoolit
 
-echo "Merging jakoolit/development into current branch..."
+# A shallow clone has no common ancestor with upstream, so git treats every
+# file as added on both sides. Deepen until a real merge base exists.
+if ! git merge-base HEAD jakoolit/development >/dev/null 2>&1 \
+  && [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+  echo "No common history with jakoolit/development; deepening..."
+  git fetch --deepen=500 jakoolit
+fi
+
+if ! base=$(git merge-base HEAD jakoolit/development); then
+  echo "Still no common ancestor with jakoolit/development."
+  echo "Refusing to merge unrelated histories. Run: git fetch --unshallow jakoolit"
+  exit 1
+fi
+
+echo "Merging jakoolit/development (base ${base:0:12}) into current branch..."
 set +e
-git merge --allow-unrelated-histories --no-ff -m "Merge upstream JaKooLit/Hyprland-Dots changes" jakoolit/development
+git merge --no-ff -m "Merge upstream JaKooLit/Hyprland-Dots changes" jakoolit/development
 status=$?
 set -e
 
