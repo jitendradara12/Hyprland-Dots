@@ -19,7 +19,7 @@
     "grouping": "auto",
     "image_preview": false,
     "new_location": "launch",
-    "verbosity": "high"
+    "verbosity": "low"
   },
   "animations": true,
   "tabs": {
