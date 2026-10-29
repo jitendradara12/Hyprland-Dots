@@ -19,9 +19,9 @@ fi
 echo "Fetching latest changes (depth 20) from jakoolit..."
 git fetch --depth 20 jakoolit
 
-echo "Merging jakoolit/main into current branch..."
+echo "Merging jakoolit/development into current branch..."
 set +e
-git merge --allow-unrelated-histories --no-ff -m "Merge upstream JaKooLit/Hyprland-Dots changes" jakoolit/main
+git merge --allow-unrelated-histories --no-ff -m "Merge upstream JaKooLit/Hyprland-Dots changes" jakoolit/development
 status=$?
 set -e
 
