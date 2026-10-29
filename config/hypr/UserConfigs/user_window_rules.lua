@@ -139,3 +139,282 @@ local apply_window_rule = user_window_rules_helper.apply_window_rule
 --   float = true,
 --   center = true,
 -- })
+
+-- =============================================================================
+-- PERSONAL WINDOW RULES (migrated from WindowRules.conf)
+-- Kept as a block at the end so upstream edits above merge cleanly.
+-- =============================================================================
+
+apply_window_rule({
+  name = "browser-zen",
+  match = {
+    class = "^(zen-alpha|zen|app.zen_browser.zen)$",
+  },
+  tag = "+browser",
+})
+
+apply_window_rule({
+  name = "projects-vscode",
+  match = {
+    class = "^(VSCode|code-url-handler)$",
+  },
+  tag = "+projects",
+})
+
+apply_window_rule({
+  name = "pip-position",
+  match = {
+    title = "^(Picture-in-Picture)$",
+  },
+  move = "(cursor_x-(window_w*0.5)) (cursor_y-(window_h*0.5))",
+})
+
+apply_window_rule({
+  name = "workspace-zen",
+  match = {
+    class = "^(zen-alpha|zen|app.zen_browser.zen)$",
+  },
+  workspace = 1,
+})
+
+apply_window_rule({
+  name = "workspace-code",
+  match = {
+    class = "^(code)$",
+  },
+  workspace = 2,
+})
+
+apply_window_rule({
+  name = "workspace-neovide",
+  match = {
+    class = "^(neovide)$",
+  },
+  workspace = 2,
+})
+
+apply_window_rule({
+  name = "workspace-kitty",
+  match = {
+    class = "^(kitty)$",
+  },
+  workspace = 3,
+})
+
+apply_window_rule({
+  name = "workspace-chrome",
+  match = {
+    class = "^([Gg]oogle-chrome(-beta|-dev|-unstable)?)$",
+  },
+  workspace = 5,
+})
+
+apply_window_rule({
+  name = "workspace-thorium",
+  match = {
+    class = "^([Tt]horium-browser)$",
+  },
+  workspace = 2,
+})
+
+apply_window_rule({
+  name = "workspace-thunar",
+  match = {
+    class = "^([Tt]hunar)$",
+  },
+  workspace = 9,
+})
+
+apply_window_rule({
+  name = "workspace-nautilus",
+  match = {
+    class = "^(org.gnome.Nautilus)$",
+  },
+  workspace = 9,
+})
+
+apply_window_rule({
+  name = "workspace-obs",
+  match = {
+    class = "^(com.obsproject.Studio)$",
+  },
+  workspace = 4,
+})
+
+apply_window_rule({
+  name = "workspace-steam",
+  match = {
+    class = "^([Ss]team)$",
+  },
+  workspace = 5,
+})
+
+apply_window_rule({
+  name = "workspace-lutris",
+  match = {
+    class = "^([Ll]utris)$",
+  },
+  workspace = 5,
+})
+
+apply_window_rule({
+  name = "workspace-discord",
+  match = {
+    class = "^([Dd]iscord|[Ww]ebCord|[Vv]esktop)$",
+  },
+  workspace = 7,
+})
+
+apply_window_rule({
+  name = "workspace-ferdium",
+  match = {
+    class = "^([Ff]erdium)$",
+  },
+  workspace = 7,
+})
+
+apply_window_rule({
+  name = "workspace-whatsapp",
+  match = {
+    class = "^([Ww]hatsapp-for-linux)$",
+  },
+  workspace = 7,
+})
+
+apply_window_rule({
+  name = "workspace-virt-manager",
+  match = {
+    class = "^(virt-manager)$",
+  },
+  workspace = 6,
+})
+
+apply_window_rule({
+  name = "workspace-audacious",
+  match = {
+    class = "^([Aa]udacious)$",
+  },
+  workspace = 9,
+})
+
+apply_window_rule({
+  name = "float-vscode-add-folder",
+  match = {
+    class = "(codium|codium-url-handler|VSCodium|code-oss)",
+    title = "(Add Folder to Workspace)",
+  },
+  float = true,
+})
+
+apply_window_rule({
+  name = "float-electron-add-folder",
+  match = {
+    class = "(electron)",
+    title = "(Add Folder to Workspace)",
+  },
+  float = true,
+})
+
+apply_window_rule({
+  name = "float-vlc",
+  match = {
+    class = "^(vlc)$",
+  },
+  float = true,
+})
+
+apply_window_rule({
+  name = "float-kdeconnect",
+  match = {
+    class = "^(org.kde.kdeconnect.app)$",
+  },
+  float = true,
+})
+
+apply_window_rule({
+  name = "float-kdeconnect-title",
+  match = {
+    title = "(KDE Connect)",
+  },
+  float = true,
+})
+
+apply_window_rule({
+  name = "float-sioyek",
+  match = {
+    class = "^(sioyek)",
+  },
+  float = true,
+})
+
+apply_window_rule({
+  name = "float-preferences",
+  match = {
+    title = "(Preferences)",
+  },
+  float = true,
+})
+
+apply_window_rule({
+  name = "float-gnome-clocks",
+  match = {
+    class = "^(org.gnome.clocks)$",
+  },
+  float = true,
+})
+
+apply_window_rule({
+  name = "opacity-browser",
+  match = {
+    tag = "browser",
+  },
+  opacity = "0.86 0.84",
+})
+
+apply_window_rule({
+  name = "opacity-zen-direct",
+  match = {
+    class = "^(app.zen_browser.zen|io.github.zen_browser.zen|zen|zen-alpha|zen-beta|zen-browser)$",
+  },
+  opacity = "0.86 0.84",
+})
+
+apply_window_rule({
+  name = "vscode-opacity-blur",
+  match = {
+    class = "^(code)$",
+  },
+  opacity = 0.86,
+})
+
+apply_window_rule({
+  name = "size-sioyek",
+  match = {
+    class = "^(sioyek)$",
+  },
+  size = "(monitor_w*0.65) (monitor_h*0.67)",
+})
+
+apply_window_rule({
+  name = "size-kdeconnect",
+  match = {
+    class = "^(org.kde.kdeconnect.app)$",
+  },
+  size = "(monitor_w*0.52) (monitor_h*0.42)",
+})
+
+apply_window_rule({
+  name = "size-kdeconnect-settings",
+  match = {
+    title = "(Settings — KDE Connect)",
+  },
+  size = "(monitor_w*0.22) (monitor_h*0.27)",
+})
+
+apply_window_rule({
+  name = "size-gnome-clocks",
+  match = {
+    class = "^(org.gnome.clocks)$",
+  },
+  size = "(monitor_w*0.32) (monitor_h*0.4)",
+})

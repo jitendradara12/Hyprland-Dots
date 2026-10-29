@@ -98,6 +98,11 @@ local startup_commands = {
   -- calls DisplayProfile.sh - so do NOT add DisplayProfile.sh here as well, or
   -- two controllers would apply layouts at the same time.
   "$HOME/.config/hypr/scripts/MonitorWatcher.sh",
+
+  -- Personal startup apps (migrated from Startup_Apps.conf)
+  "pypr",
+  "kdeconnect-indicator",
+  "sleep 6 && kdeconnect-cli --refresh",
 }
 
 local function run_startup_commands()

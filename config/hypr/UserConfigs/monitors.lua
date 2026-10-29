@@ -16,3 +16,12 @@
 --     position = "auto",
 --     scale = "1",
 -- })
+
+-- Personal monitor rule (nwg-displays, 2026-09-13).
+hl.monitor({
+  output = "eDP-1",
+  mode = "2160x1440@60.0",
+  position = "0x0",
+  scale = 1.2,
+  vrr = 0,
+})

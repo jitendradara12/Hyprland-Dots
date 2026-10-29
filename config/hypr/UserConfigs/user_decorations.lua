@@ -70,3 +70,56 @@ hl.config({
     },
   },
 })
+
+-- =============================================================================
+-- PERSONAL DECORATIONS (migrated from UserDecorations.conf)
+-- Kept as a block at the end so upstream edits above merge cleanly.
+-- =============================================================================
+
+hl.config({
+  general = {
+    border_size = 0,
+    gaps_in = 0,
+    gaps_out = 0,
+    col = {
+      active_border = active_col,
+      inactive_border = inactive_col,
+    },
+  },
+  decoration = {
+    rounding = 0,
+    active_opacity = 1.0,
+    inactive_opacity = 0.9,
+    fullscreen_opacity = 1.0,
+    dim_inactive = true,
+    dim_strength = 0.1,
+    dim_special = 0.8,
+    shadow = {
+      enabled = false,
+      range = 3,
+      render_power = 1,
+      color = active_col,
+      color_inactive = inactive_col,
+    },
+    blur = {
+      enabled = true,
+      size = 6,
+      passes = 2,
+      new_optimizations = true,
+      xray = false,
+      ignore_opacity = true,
+      special = true,
+      popups = true,
+    },
+  },
+  group = {
+    col = {
+      border_active = wallust.color15 or active_col,
+    },
+    groupbar = {
+      col = {
+        active = wallust.color0 or "rgba(0f111aff)",
+      },
+    },
+  },
+})

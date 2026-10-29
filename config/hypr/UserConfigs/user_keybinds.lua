@@ -138,3 +138,44 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/DisplayProfile.sh -- Work"),
   { description = "Display layouts: apply the layout named Work" }
 )
+
+-- =============================================================================
+-- PERSONAL KEYBINDS (migrated from UserKeybinds.conf)
+-- Kept as a block at the end so upstream edits above merge cleanly.
+-- =============================================================================
+
+-- Remap keys that already have upstream defaults.
+unbind("SUPER", "F")
+unbind("SUPER SHIFT", "F")
+unbind("SUPER", "T")
+unbind("SUPER", "SPACE")
+unbind("ALT", "tab")
+unbind("SUPER", "B")
+unbind("SUPER CTRL", "S") -- window switcher -> freed for volume down
+
+bind("SUPER", "F", dispatch("fullscreen", ""), { description = "fullscreen" })
+bind("SUPER SHIFT", "F", dispatch("togglefloating", ""), { description = "Float current window" })
+bind("SUPER", "T", exec_cmd("$files"), { description = "file manager" })
+bind("SUPER", "SPACE", exec_cmd("$HOME/.config/hypr/scripts/OverviewToggle.sh"), { description = "desktop overview" })
+bind("ALT SHIFT", "tab", dispatch("cyclenext", "prev"), { description = "cycle previous window" })
+bind("ALT", "tab", dispatch("cyclenext", ""), { description = "cycle next window" })
+bind("SUPER", "Z", exec_cmd("pypr zoom"), { description = "zoom" })
+bind("SUPER", "B", exec_cmd("pkill -SIGUSR1 waybar"), { description = "toggle waybar on/off" })
+bind("SUPER ALT", "I", exec_cmd("$HOME/.config/hypr/scripts/AgentsRunningToggle.sh"), { description = "toggle agents running mode" })
+bind("SUPER CTRL", "w", exec_cmd("pamixer -u && pamixer -i 5 --allow-boost --set-limit 150"), {
+  description = "Volume up (silent)",
+  locked = true,
+  repeating = true,
+})
+bind("SUPER CTRL", "s", exec_cmd("pamixer -u && pamixer -d 5"), {
+  description = "Volume down (silent)",
+  locked = true,
+  repeating = true,
+})
+bind("SUPER CTRL", "x", exec_cmd("pamixer -t"), { description = "Toggle mute (silent)", locked = true })
+bind("CTRL SHIFT", "2", function()
+  local ok, dispatcher = pcall(hl.dsp.global, "com.t3tools.T3Code:capture-window")
+  if ok and dispatcher then
+    hl.dispatch(dispatcher)
+  end
+end, { description = "T3 Code: capture window" })

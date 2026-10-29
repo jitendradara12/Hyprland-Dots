@@ -48,3 +48,26 @@ local apply_layer_rule = user_layer_rules_helper.apply_layer_rule
 --   blur = true,
 --   ignore_alpha = 0,
 -- })
+
+-- =============================================================================
+-- PERSONAL LAYER RULES (migrated from WindowRules.conf)
+-- Only rules that upstream does not already provide. Kept as a block at the
+-- end so upstream edits above merge cleanly.
+-- =============================================================================
+
+apply_layer_rule({
+  name = "waybar-blur",
+  match = {
+    namespace = "waybar",
+  },
+  blur = true,
+  ignore_alpha = 0,
+})
+
+apply_layer_rule({
+  name = "swaync-control-center-blur",
+  match = {
+    namespace = "swaync-control-center",
+  },
+  blur = true,
+})
