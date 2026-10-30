@@ -63,6 +63,41 @@
   - A 1px `border_size` made that read as a solid hairline border
   - The angle is now a `45deg` diagonal, so all four edges carry colour
   - `RB_ANGLE` overrides it; `0` and `90` are the flat-edge cases
+- Quickshell's generated palette holds valid colours again
+  - `templates/qml_color.json` prefixed two values with its own `#`
+  - Wallust writes `#RRGGBB`, so those lines rendered `##RRGGBB`
+  - `accentSecondary` and `borderSecondary` were both invalid colours
+  - The stray `#` is gone; every other value already used `{{colorN}}`
+  - Written on every wallpaper change, so it reached every install
+- A wallpaper change no longer kills Ghostty's own theme list
+  - `Ghostty_themes.sh` and `GhosttyThemeGuard.sh` run `ghostty +list-themes`
+  - `pidof ghostty` matched that run as well as the running terminal
+  - The reload signal went to both, so the list came back empty or short
+  - The guard read that as the theme not being installed
+  - It then commented the theme out and fell back to wallpaper colours
+  - `TerminalSignal.sh` resolves the application and skips CLI invocations
+  - A ghostty subcommand is a `+` argument; kitty adds `@` for remote control
+  - `WallustSwww.sh`, `ThemeChanger.sh`, `Ghostty_themes.sh` use it
+  - `GhosttyThemeGuard.sh` and `Kitty_themes.sh` use it too
+  - The list is read in about 65ms, so the window was short but real
+  - `tests/test-terminal-signal.sh` covers the skip
+- `Refresh.sh` brings Waybar back on NixOS
+  - It handed `/bin/bash` to `systemd-run` and to `setsid`
+  - NixOS ships no `/bin/bash`, so the bar was never relaunched
+  - Both now use `"$BASH"`, the bash already running the script
+  - That is absolute, so systemd's own `PATH` does not matter
+  - `tests/test-shebangs.sh` checks the rule repo-wide
+- The Ghostty theme menu lists the installed themes again
+  - It keeps only themes `ghostty +list-themes` reports
+  - Ghostty 1.4.0 tags the bundled set `(resources)`
+  - The filter stripped only `(user)` and `(builtin)`
+  - So the exact match missed and every built-in read as missing
+  - The menu offered only themes present as user theme files
+  - From a terminal it looked full: the resources path is set there
+  - Under rofi that path is unset, so the list came up nearly empty
+  - Any lowercase tag in parentheses is stripped now
+  - `GhosttyThemeGuard.sh` had the same filter and is fixed too
+  - A theme commented twice no longer produces two identical rows
 
 ## Added:
 
@@ -102,6 +137,31 @@
   - `Kool_Quick_Settings.sh` lists it under `[[ Toggle Options ]]`
   - `system_keybinds.lua` binds `SUPER SHIFT X`
   - `ToggleWobble.sh --status` prints `On`/`Off`/`Unsupported`
+- The wallpaper palette can come from `butterpal` instead of `wallust`
+  - `butterpal --json` emits a pywal colorscheme, which `wallust cs` reads
+  - So wallust still renders every template and the two swap cleanly
+  - `WallustConfig.sh` holds the source resolution and the scheme path
+  - `WallustSwww.sh` and `copy.sh` both use it
+  - Named themes (`wallust theme`) stay wallust's, which has no equivalent
+  - Falls back to `wallust run` when butterpal produces no scheme
+  - butterpal reads PNG, JPEG, BMP and GIF; WebP and video take that fallback
+  - `KOOLDOTS_PALETTE_SOURCE` or `state/hypr/palette_source` picks the source
+  - Without either, wallust, which is the default
+  - butterpal is opt-in: it is not installed by default
+  - Quick Settings lists `Choose Palette Source` under `[[ Misc ]]`
+  - It marks the current source and regenerates on a change
+  - Picking Butterpal with butterpal missing notifies and changes nothing
+  - The state file would otherwise claim a source that cannot run
+  - `ButterpalWallust.sh --source butterpal` refuses the same way
+  - `ButterpalWallust.sh` renders on demand and takes `--dry-run`
+- `butterpal` is installed from a bundled asset
+  - `copy.sh` unpacks `assets/butterpal.gz` to `/usr/local/bin`
+  - Only when it is not already installed, and never on NixOS
+  - The check looks at `PATH`, then `/usr/bin` and `/usr/local/bin`
+  - An install can run under `sudo` with a `PATH` holding neither
+  - The asset is dynamically linked, so it cannot run on NixOS
+  - A flake is expected to provide it there instead
+  - butterpal stays optional: the palette source still defaults to wallust
 
 ## Updated:
 
@@ -132,6 +192,42 @@
   - Editors flagged `decoration.wobble.*`, which the dots already set
   - New `HL.ConfigOpt` tree types `hl.config({ ... })` as well
   - Refresh with `cp` from that path, then add the trailing newline
+- `colors-ghostty.conf` no longer claims it is always included
+  - It said the file "is included by `~/.config/ghostty/config` when present"
+  - Both shipped configs ship that line commented, with a theme active
+  - So the file was written on every wallpaper change and read by nothing
+  - That is why the Ghostty reload signal went unnoticed for so long
+  - The header now names the `config-file` line that turns the include on
+- The wallpaper accent is the palette's `color12`, for both sources
+  - `color12` is the accent the borders, menus and bar read
+  - wallust already puts its accent in that slot
+  - butterpal keeps `color12` ANSI blue and puts its accent in `cursor`
+  - `WallustConfig.sh` moves that accent into `color12` before rendering
+  - So the templates stay on `{{color12}}` and serve both sources
+  - An earlier attempt pointed the templates at `{{cursor}}` instead
+  - wallust's cursor is a warm tone, so a blue wallpaper came out pink
+  - Rofi's selection is no longer rebuilt from `color12`/`color13`
+  - Under butterpal, terminal slot 12 is the accent, as wallust did before
+- Ghostty's wallpaper colours need a Ghostty reload, not a signal
+  - `WallustSwww.sh` sends `SIGUSR2`, which Ghostty receives and acts on
+  - On 1.4.0 that reload does not repaint a surface that is already open
+  - Writing the palette into the main config fails the same way
+  - So the colours appear only after Ghostty's own reload or a restart
+  - The signal stays: it is right for builds that do apply it
+- The Ghostty palette lives under `UserConfigs` now
+  - It was written to `~/.config/ghostty/wallust.conf`
+  - Kitty's palette has always been in `UserConfigs/kitty-themes/`
+  - So it moves to `UserConfigs/ghostty-themes/01-Wallust.conf`
+  - That directory is protected, so another tool cannot overwrite it
+  - `patches/22-ghostty-wallust-target.sh` moves it on an upgrade
+  - The patch rewrites the include in both configs, keeping its state
+  - It is idempotent and skips a fresh install
+- The two shipped Ghostty configs no longer disagree
+  - `config/ghostty/config` shipped `font-family = "Iosevkeley Mono"`
+  - `UserConfigs/ghostty.conf` shipped `JetBrainsMono Nerd Font Mono`
+  - The runtime template carried a name `21-ghostty-font.sh` exists to fix
+  - Which font was in effect depended on what ran last
+  - They are identical now, and a test keeps them that way
 
 ## Removed:
 
@@ -149,6 +245,11 @@
   - `user_decorations.lua` loads later and sets all three
   - So the example never applied, and read as the place to edit them
   - The comment now points at `UserConfigs/user_decorations.lua`
+- The `dots-tui` installer binaries
+  - `dots-tui` and `dots-tui-ubuntu-2404` were a packed Python TUI, 18MB
+  - Nothing in the dots called them, in config, scripts, keybinds or docs
+  - It had fallen well behind the current config layout
+  - A replacement install/upgrade TUI is planned
 
 ---- 
 
