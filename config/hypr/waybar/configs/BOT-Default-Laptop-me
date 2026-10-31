@@ -1,0 +1,72 @@
+/* ---- 💫 https://github.com/LinuxBeginnings 💫 ---- */
+
+// ### DEFAULT Laptop  - Bottom (me) ### //
+{
+	"include": [
+	  "$HOME/.config/hypr/waybar/Modules",
+	  "$HOME/.config/hypr/waybar/ModulesWorkspaces",
+	  "$HOME/.config/hypr/waybar/ModulesCustom",
+	  "$HOME/.config/hypr/waybar/ModulesGroups",
+	  "$HOME/.config/hypr/waybar/UserModules",
+	  ],
+	"layer": "top",
+	//"mode": "dock",
+	"exclusive": true,
+	"passthrough": false,
+	"position": "bottom",
+	"spacing": 3,
+	"fixed-center": true,
+	"ipc": true,
+	"margin-top": 0,
+	"margin-left": 8,
+	"margin-right": 8,
+	
+	"modules-left": [
+		"custom/separator#blank",
+		"hyprland/workspaces#rw",
+		"custom/separator#dot-line",
+		"group/mobo_drawer",
+		"custom/separator#blank_2",
+	],
+	
+	"modules-center": [
+		"clock",
+	],
+	
+	"modules-right": [
+		"network#speed",
+		"tray",
+		"custom/separator#dot-line",
+		"group/laptop",
+		"custom/separator#dot-line",
+		"group/audio",
+		"custom/separator#dot-line",
+		"custom/power",
+	],
+
+	"group/mobo_drawer": {
+		"orientation": "inherit",
+		"drawer": {
+			"transition-duration": 500,
+			"children-class": "cpu",
+			"transition-left-to-right": true
+		},
+		"modules": [
+			"custom/temperature",
+			"cpu",
+			"power-profiles-daemon",
+			"memory",
+			"disk",
+		]
+	},
+
+	"custom/temperature": {
+		"exec": "$HOME/.config/hypr/scripts/WaybarTemperature-me.py",
+		"return-type": "json",
+		"interval": 3,
+		"format": "{}",
+		"tooltip": true,
+		"on-click-right": "$HOME/.config/hypr/scripts/WaybarScripts.sh --nvtop",
+		"on-click": "$HOME/.config/hypr/scripts/WaybarScripts.sh --btop"
+	},
+}
