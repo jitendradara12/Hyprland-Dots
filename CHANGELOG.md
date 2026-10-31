@@ -4,6 +4,12 @@
 
 ## Fixed:
 
+- The `custom/dot_update` Waybar tooltip is no longer blank
+  - `tooltip-format` is rendered as Pango markup, not plain text
+  - The text held a bare `&` in `Download & upgrade`
+  - Pango rejects that, so the tooltip parsed to nothing
+  - It is escaped as `&amp;` now
+
 - Clients that need an alpha buffer can start again, e.g. `kitty` on a VM
   - `quirks:skip_non_kms_dmabuf_formats` defaults to `true`
   - It narrows advertised renderer dmabuf formats to the display's scanout set
@@ -101,6 +107,11 @@
 
 ## Added:
 
+- Quickshell network / Bluetooth widget for waybar
+  - Ethernet, Wi-Fi and Bluetooth tabs, with address, gateway, DNS and MAC
+  - Waybar `custom/qs-network` icon on every bundled bar layout
+  - Each bundled style carries a matching `#custom-qs-network` rule
+  - Colours follow wallust, so the panel tracks the current wallpaper
 - Waybar's dots update check can now download and run the upgrade
   - Right-click `custom/dot_update`, or pick `Upgrade now` in its window
   - It clones the installer for your OS and `Hyprland-Dots` into a temp dir
@@ -162,6 +173,18 @@
   - The asset is dynamically linked, so it cannot run on NixOS
   - A flake is expected to provide it there instead
   - butterpal stays optional: the palette source still defaults to wallust
+- Quickshell network & bluetooth panel for Waybar
+  - Horizontal tabs for Ethernet, Wi-Fi and Bluetooth, one screen each
+  - `custom/qs-network` shows the active link, left click opens the panel
+  - Right click keeps the old `nmtui` behaviour
+  - Ethernet and Wi-Fi tabs show address, gateway, DNS and MAC
+  - Wi-Fi tab lists networks, click one to connect, the active one to drop
+  - Locked networks ask for the password inline
+  - Bluetooth tab groups connected devices and shows their battery
+  - Panel follows wallust: background, accent and text from the palette
+  - Both `colors-waybar.css` and `qml_color.json` are watched for changes
+  - New: `hypr/quickshell/network-widget/` and `QsNetworkPanel.sh`
+  - Enabled on the `TOP-Default` and `TOP-Default-Laptop` bars
 
 ## Updated:
 
