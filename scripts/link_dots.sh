@@ -70,6 +70,28 @@ if [ -L "$HOME/.zshrc" ] && [ "$(readlink -f "$HOME/.zshrc")" = "$(readlink -f "
     rm "$HOME/.zshrc"
 fi
 
+# Waybar needs a concrete config to open. The installer normally creates
+# ~/.config/hypr/waybar/config -> configs/<layout>; a hand-linked checkout
+# skips that step, so create the generated link here.
+waybar_dir="$TARGET_DIR/hypr/waybar"
+if [ -d "$waybar_dir/configs" ] && [ ! -e "$waybar_dir/config" ]; then
+    waybar_config="$waybar_dir/configs/TOP-Default"
+    if compgen -G "/sys/class/power_supply/BAT*" >/dev/null 2>&1; then
+        waybar_config="$waybar_dir/configs/TOP-Default-Laptop"
+    fi
+    [ -f "$waybar_config" ] || waybar_config="$waybar_dir/configs/TOP-Default"
+    if [ -f "$waybar_config" ]; then
+        ln -sf "$waybar_config" "$waybar_dir/config"
+        echo "Creating Waybar config symlink for $waybar_config"
+    fi
+fi
+
+# The active Waybar layout is generated state, not a file to commit.
+exclude_file="$SCRIPT_DIR/../.git/info/exclude"
+if [ -f "$exclude_file" ] && ! grep -qxF '/config/hypr/waybar/config' "$exclude_file"; then
+    printf '%s\n' '/config/hypr/waybar/config' >> "$exclude_file"
+fi
+
 echo
 echo "✓ Sync complete! All dotfiles are now symlinked."
 echo "You can now edit files as normal, and commit/push changes from $SCRIPT_DIR/.."
