@@ -151,6 +151,7 @@ unbind("SUPER", "T")
 unbind("SUPER", "SPACE")
 unbind("ALT", "tab")
 unbind("SUPER", "B")
+unbind("SUPER CTRL", "W") -- wlogout theme selector -> freed for volume up
 unbind("SUPER CTRL", "S") -- window switcher -> freed for volume down
 
 bind("SUPER", "F", dispatch("fullscreen", ""), { description = "fullscreen" })
