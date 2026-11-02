@@ -4,8 +4,22 @@
 --  License: GNU GPLv3
 --  SPDX-License-Identifier: GPL-3.0-or-later
 -- ==================================================
--- User animation overrides.
--- Personal preset migrated from UserAnimations.conf.
+-- User animation overrides template.
+-- Use this to override defaults from lua/animations.lua.
+
+-- Example:
+-- hl.config({
+--   animations = {
+--     enabled = true,
+--   },
+-- })
+--
+-- hl.animation({ leaf = "windows", enabled = true, speed = 5, bezier = "wind", style = "slide" })
+
+-- =============================================================================
+-- PERSONAL ANIMATIONS (migrated from UserAnimations.conf)
+-- Kept as a block at the end so upstream edits above merge cleanly.
+-- =============================================================================
 
 hl.config({
   animations = {

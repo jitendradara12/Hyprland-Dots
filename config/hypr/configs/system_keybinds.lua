@@ -624,7 +624,8 @@ bind(
   exec_cmd("$HOME/.config/hypr/scripts/ToggleOpacity.sh"),
   { description = "toggle active window opacity" }
 )
-bind("SUPER SHIFT", "K", exec_cmd("$HOME/.config/hypr/scripts/KeyBinds.sh"), { description = "search keybinds" })
+-- Quickshell panel where it can run, the rofi menu where it cannot.
+bind("SUPER SHIFT", "K", exec_cmd("$HOME/.config/hypr/scripts/QsKeybinds.sh toggle"), { description = "search keybinds" })
 bind("SUPER SHIFT", "A", exec_cmd("$HOME/.config/hypr/scripts/Animations.sh"), { description = "animations menu" })
 bind(
   "SUPER SHIFT",

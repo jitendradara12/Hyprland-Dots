@@ -4,6 +4,61 @@
 
 ## Fixed:
 
+- The 24H answer at install now reaches every Waybar clock
+  - The install prompt applied 12H only, so the 24H answer changed nothing
+  - Its `sed` patterns had drifted off the modules files and matched nothing
+  - `clock`, `clock#2` and `clock#5` therefore stayed on 12H as shipped
+  - `ModulesVertical` was never edited at all
+  - `format-alt` is toggled too, so the extended display cannot disagree
+  - `clock#forest` and `clock#text` were outside the toggle entirely
+  - Both now have a 12H/24H pair and are edited with the rest
+  - The Waybar half is delegated to `ToggleWaybarTime.sh`
+  - That is the script Quick Settings already runs, so they cannot drift
+  - The prompt now offers 24H or 12H and applies whichever is answered
+  - The shipped modules and hyprlock templates now default to 24H
+  - The hyprlock hour label is swapped rather than set one way
+  - Answering 24H used to leave a 12H lock screen
+  - `hyprlock-2k.conf` had a live seconds label inside a commented block
+  - `test-waybar-clock.sh` covers both answers and the shipped defaults
+  - Issue: [#163](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/163)
+
+- Workspace to display bindings from `nwg-displays` are applied again
+  - `nwg-displays` writes them to `workspaces.conf`, which nothing loads
+  - The Lua config reads `UserConfigs/workspaces.lua`, which held no rule
+  - So `SUPER` + `1`..`0` put the workspace on whichever monitor had focus
+  - `MonitorWatcher.sh` now imports that file as `hl.workspace_rule` entries
+  - Imported rules are marked, so a rule of your own is never rewritten
+  - A workspace you unassign in `nwg-displays` keeps its layout
+  - `ChangeLayout.sh` no longer binds a monitor when a layout is changed
+  - A layout belongs to the workspace, not to the display it was on
+  - An old rule left with `monitor` in it is cleared on the next layout change
+  - `PersistWorkspaceLayout.sh` no longer writes the dead `workspaces.conf`
+  - Issue: [#162](https://github.com/LinuxBeginnings/Hyprland-Dots/issues/162)
+
+- `custom/qs-network` now matches each Waybar style's module treatment
+  - Styles had a pasted `#custom-qs-network` rule with padding and radius
+  - The module was missing from each style's shared module selector list
+  - It now inherits the same pill, underline or background as `#network`
+  - `Garuda.css` and `Wallust-Box-type.css` use an underline, not a pill
+  - `Matt-bright-style.css` has no shared list, so it gets a standalone rule
+- Quickshell applets no longer render pure white in dark themes
+  - `templates/qml_color.json` mapped `layerBackground1` to `color7`
+  - In dark palettes `color7` is the light foreground text color
+  - Workspace cards in overview read `colLayer1`, which became pure white
+  - `templates/qml_color.json` now maps to `background` and `color12`
+  - `overview/common/Appearance.qml` derives surface layers via `ColorUtils.mix`
+  - `MaterialThemeLoader` discards light layer overrides in dark mode
+- Network widget paths no longer fail on non-standard XDG environments
+  - `Backend.qml` and `QsNetworkPanel.sh` resolved from an obsolete path
+  - Relative and environment-based path resolution restores functionality
+
+- A saved config file applies again after a dots upgrade
+  - An inotify watch follows the inode, not the path
+  - The upgrade backs `~/.config/hypr` up and copies a new tree in
+  - The watches then pointed at deleted directories and never fired again
+  - `inotifywait` stayed alive, so the watcher looked healthy but was deaf
+  - `LuaConfigWatch.sh` records each directory's inode and re-arms on a change
+  - Re-arming reconciles every watched file, so a save meanwhile still lands
 - The `custom/dot_update` Waybar tooltip is no longer blank
   - `tooltip-format` is rendered as Pango markup, not plain text
   - The text held a bare `&` in `Download & upgrade`
@@ -107,6 +162,23 @@
 
 ## Added:
 
+- `docs/KoolDots-UserGuide.md` and spanish translation `docs/KoolDots-UserGuide.es.md`
+- Quickshell keybind panel: a searchable frame of key caps, grouped by function
+  - Lists what the compositor has bound, not what the config text says
+  - Reads the same live index `SUPER SHIFT K` hands to rofi
+  - One 3D key cap per key in the chord, drawn rather than shipped as images
+  - Modifier caps are tinted with the palette accent
+  - Sorted into categories, with a header and a count per category
+  - Two binds to a row in one scrollable page; frame up to 1426x989
+  - Type to filter on the chord or the description
+  - `↑`/`↓` move the selection, `Enter` copies the chord
+  - `Esc` or a click outside dismisses it
+  - `SUPER SHIFT K` opens it, the keybind the rofi menu had
+  - Where quickshell is missing that keybind opens the rofi menu instead
+  - So the Ubuntu 24.04 based installs keep the menu they always had
+  - `QsKeybinds.sh which` prints which of the two would open
+  - Colours follow wallust; the layer rule blurs the card only
+  - New: `quickshell/keybinds/` and `QsKeybinds.sh`
 - Quickshell network / Bluetooth widget for waybar
   - Ethernet, Wi-Fi and Bluetooth tabs, with address, gateway, DNS and MAC
   - Waybar `custom/qs-network` icon on every bundled bar layout
@@ -183,10 +255,15 @@
   - Bluetooth tab groups connected devices and shows their battery
   - Panel follows wallust: background, accent and text from the palette
   - Both `colors-waybar.css` and `qml_color.json` are watched for changes
-  - New: `hypr/quickshell/network-widget/` and `QsNetworkPanel.sh`
+  - New: `quickshell/network-widget/` and `QsNetworkPanel.sh`
   - Enabled on the `TOP-Default` and `TOP-Default-Laptop` bars
 
 ## Updated:
+
+- Quickshell applets unified on dynamic Wallust theme resolution
+  - Portable `MaterialThemeLoader` installed across applets
+  - `overview` and `qs-hyprview` update dynamically on wallpaper change
+  - Legacy M3 aliases preserved for compatibility with existing widgets
 
 - `SUPER SHIFT B` opens the Rainbow Borders mode menu
   - It ran `RainbowBorders-low-cpu.sh --run-once`, one fixed gradient
